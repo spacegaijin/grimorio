@@ -49,6 +49,7 @@ input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color
 .item .preco{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .item .preco input{width:110px;background:var(--bg);border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:17px}
 .item .preco input.qtd{width:58px}
+.item .colar{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 10px}
 .item .add{background:var(--ok);color:#000;font-weight:700;border:0;border-radius:8px;padding:10px 14px}
 .item .canc{background:transparent;border:1px solid var(--borda);color:var(--txt2);border-radius:8px;padding:10px 12px}
 
@@ -124,6 +125,20 @@ function ligaUrl(nome){
     : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
 }
 try { var salvo = JSON.parse(localStorage.getItem('balcao-carrinho') || '[]'); if (Array.isArray(salvo)) carrinho = salvo; } catch (e) {}
+
+/* ===== câmbio do dia (AwesomeAPI, aberta) ===== */
+var cambio = {USD: 0, EUR: 0};
+function carregarCambio(){
+  fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL').then(function(r){ return r.json(); }).then(function(j){
+    if (j.USDBRL) cambio.USD = parseFloat(j.USDBRL.bid) || 0;
+    if (j.EURBRL) cambio.EUR = parseFloat(j.EURBRL.bid) || 0;
+  }).catch(function(){});
+}
+carregarCambio();
+function emReais(valor, moeda){
+  var tx = cambio[moeda] || 0;
+  return (valor > 0 && tx > 0) ? valor * tx : 0;
+}
 
 /* ===== câmera ===== */
 function ligarCamera(){
@@ -273,16 +288,48 @@ function escolherNome(nome){
     : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
   fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
     if (!itemAtual || itemAtual.nome !== nome || !j) return;
+    var ref = 0, refTxt = '';
     if (jogo === 'Magic') {
       itemAtual.img = j.image_uris ? j.image_uris.normal : (j.card_faces && j.card_faces[0].image_uris ? j.card_faces[0].image_uris.normal : '');
-      itemAtual.ed = (j.set_name || '') + (j.prices && j.prices.usd ? ' · ref. US$ ' + j.prices.usd : '');
+      var usd = j.prices ? parseFloat(j.prices.usd || j.prices.usd_foil || 0) : 0;
+      var eur = j.prices ? parseFloat(j.prices.eur || j.prices.eur_foil || 0) : 0;
+      ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
+      refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
+      itemAtual.ed = (j.set_name || '') + (refTxt ? ' · mercado intl. ' + refTxt : '');
     } else {
       var c = Array.isArray(j) ? j[0] : null;
       if (c && c.image) itemAtual.img = c.image + '/high.webp';
       itemAtual.ed = Array.isArray(j) ? j.length + ' impressões conhecidas' : '';
+      if (c && c.id) {
+        fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(c.id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+          if (!d || !d.pricing || !itemAtual || itemAtual.nome !== nome) return;
+          var cm = d.pricing.cardmarket, tp = d.pricing.tcgplayer;
+          var v = 0, t = '';
+          if (cm && (cm.trend || cm.avg)) { v = emReais(cm.trend || cm.avg, 'EUR'); t = '€ ' + (cm.trend || cm.avg).toFixed(2); }
+          else if (tp) { var k = Object.keys(tp)[0]; var m = k && tp[k] ? (tp[k].marketPrice || tp[k].midPrice) : 0; if (m) { v = emReais(m, 'USD'); t = 'US$ ' + m.toFixed(2); } }
+          if (v) aplicarRef(v, t);
+        }).catch(function(){});
+      }
     }
     if ($('imgItem')) { if (itemAtual.img) { $('imgItem').src = itemAtual.img; $('imgItem').style.visibility = 'visible'; } $('edItem').textContent = itemAtual.ed; }
+    if (ref) aplicarRef(ref, refTxt);
   }).catch(function(){});
+}
+function aplicarRef(v, txt){
+  var inp = $('precoItem'); if (!inp) return;
+  if (!inp.value) inp.value = v.toFixed(2).replace('.', ',');
+  var r = $('refItem'); if (r) r.textContent = 'ref. ' + dinheiro(v) + (txt ? ' (' + txt + ' × câmbio do dia)' : '');
+}
+function colarPreco(){
+  if (!navigator.clipboard || !navigator.clipboard.readText) { toast('Seu navegador não deixa colar automático'); return; }
+  navigator.clipboard.readText().then(function(t){
+    var m = String(t).match(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+(?:[\.,][0-9]{1,2})?)/);
+    if (!m) { toast('Não achei número no que foi copiado'); return; }
+    var v = lerPreco(m[1].replace(/\./g, '').replace(',', '.'));
+    if (m[1].indexOf(',') < 0 && m[1].indexOf('.') >= 0) v = parseFloat(m[1]);
+    $('precoItem').value = v.toFixed(2).replace('.', ',');
+    toast('Preço colado: ' + dinheiro(v));
+  }).catch(function(){ toast('Permissão de colar negada'); });
 }
 function desenharItem(){
   if (!itemAtual) { $('item').innerHTML = ''; if (auto && stream && !lendo) loopAuto(); return; }
@@ -290,8 +337,9 @@ function desenharItem(){
     '<img id="imgItem" src="' + esc(itemAtual.img) + '" alt="" style="' + (itemAtual.img ? '' : 'visibility:hidden') + '">' +
     '<div class="campos"><b>' + esc(itemAtual.nome) + '</b><span class="ed" id="edItem">' + esc(itemAtual.ed) + '</span>' +
     '<a class="liga ' + (jogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrl(itemAtual.nome)) + '" target="_blank" rel="noopener">Ver preço na ' + (jogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + ' ↗</a>' +
-    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="decimal" placeholder="0,00"><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
-    '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div></div></div>';
+    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="decimal" placeholder="0,00"><button class="colar" id="colarItem" title="colar valor copiado da Liga">Colar</button><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
+    '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div>' +
+    '<span class="ed" id="refItem"></span></div></div>';
   $('item').scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 function adicionar(){
@@ -329,6 +377,7 @@ document.addEventListener('click', function(ev){
   var sg = ev.target.closest('#sugestoes button');
   if (sg) { escolherNome(sg.getAttribute('data-nome')); return; }
   if (ev.target.closest('#addItem')) { adicionar(); return; }
+  if (ev.target.closest('#colarItem')) { colarPreco(); return; }
   if (ev.target.closest('#cancItem')) { itemAtual = null; ultimoTexto = ''; desenharItem(); return; }
   var rm = ev.target.closest('.carrinho .rm');
   if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); salvar(); desenharCarrinho(); return; }
