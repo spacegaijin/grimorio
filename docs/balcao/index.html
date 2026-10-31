@@ -65,7 +65,9 @@ input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color
 .carrinho .tot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:18px}
 .carrinho .tot b{color:var(--ac2);font-size:24px}
 .carrinho .acoes{display:flex;gap:8px;margin-top:10px}
+.carrinho .acoes{flex-wrap:wrap}
 .carrinho .acoes button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:8px 12px}
+.carrinho .acoes button.zap{background:#25d366;border-color:#25d366;color:#000;font-weight:700}
 .sheet{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column}
 .sheet[hidden]{display:none}
 .sheet-cab{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--borda)}
@@ -104,7 +106,7 @@ input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color
     <h3>Levando</h3>
     <div id="itens"><div class="status">Nada ainda.</div></div>
     <div class="tot"><span>Total</span><b id="total">R$ 0,00</b></div>
-    <div class="acoes"><button id="copiar">Copiar lista</button><button id="limpar">Limpar</button></div>
+    <div class="acoes"><button id="whats" class="zap">Enviar no WhatsApp</button><button id="copiar">Copiar lista</button><button id="limpar">Limpar</button></div>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -408,12 +410,31 @@ function desenharCarrinho(){
   $('itens').innerHTML = h || '<div class="status">Nada ainda.</div>';
   $('total').textContent = dinheiro(tot);
 }
+function ligaUrlJogo(nome, j){
+  return j === 'Magic'
+    ? 'https://www.ligamagic.com.br/?view=cards/card&card=' + encodeURIComponent(nome)
+    : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
+}
+function textoLista(){
+  var tot = 0, d = new Date();
+  var linhas = ['*Lista de cartas* — ' + d.toLocaleDateString('pt-BR') + ' ' + d.toTimeString().slice(0, 5), ''];
+  carrinho.forEach(function(it, i){
+    var s = it.preco * it.qtd; tot += s;
+    linhas.push((i + 1) + '. *' + it.nome + '*' + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s));
+    linhas.push('   ' + ligaUrlJogo(it.nome, it.jogo));
+  });
+  linhas.push('', '*TOTAL: ' + dinheiro(tot) + '*', '', '(valores anotados no balcão; links para conferência na Liga)');
+  return linhas.join('\n');
+}
 function copiar(){
-  var tot = 0, linhas = carrinho.map(function(it){ var s = it.preco * it.qtd; tot += s; return it.nome + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s); });
-  linhas.push('TOTAL — ' + dinheiro(tot));
-  var txt = linhas.join('\n');
-  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ toast('Lista copiada'); }, function(){ fallbackCopiar(txt); });
+  if (!carrinho.length) { toast('Lista vazia'); return; }
+  var txt = textoLista();
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ toast('Lista copiada — cola no WhatsApp'); }, function(){ fallbackCopiar(txt); });
   else fallbackCopiar(txt);
+}
+function whatsapp(){
+  if (!carrinho.length) { toast('Lista vazia'); return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(textoLista()), '_blank');
 }
 function fallbackCopiar(txt){ var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Lista copiada'); } catch (e) {} ta.remove(); }
 
@@ -433,6 +454,7 @@ document.addEventListener('click', function(ev){
   var rm = ev.target.closest('.carrinho .rm');
   if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); salvar(); desenharCarrinho(); return; }
   if (ev.target.closest('#copiar')) { copiar(); return; }
+  if (ev.target.closest('#whats')) { whatsapp(); return; }
   if (ev.target.closest('#limpar')) { carrinho = []; salvar(); desenharCarrinho(); toast('Lista limpa'); return; }
   if (ev.target.closest('#btLer')) { ultimoTexto = ''; lerQuadro(); return; }
   if (ev.target.closest('#btAuto')) { auto = !auto; $('btAuto').textContent = 'Auto: ' + (auto ? 'ligado' : 'desligado'); if (auto) loopAuto(); return; }
