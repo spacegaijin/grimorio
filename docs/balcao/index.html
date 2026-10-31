@@ -410,6 +410,21 @@ function consultarNomes(q){
   });
 }
 
+function buscarNomes(q, daCamera){
+  q = (q || '').trim();
+  if (q.length < 3) { $('sugestoes').innerHTML = ''; return; }
+  if (q === ultimaBusca && !daCamera) return;
+  ultimaBusca = q;
+  consultarNomes(q).then(function(nomes){ desenharSugestoes(nomes, q, daCamera); });
+}
+function desenharSugestoes(nomes, q, daCamera){
+  var h = '';
+  nomes.forEach(function(n, i){ h += '<button class="' + (i === 0 && daCamera ? 'hit' : '') + '" data-nome="' + esc(n) + '">' + esc(n) + '</button>'; });
+  h += '<button data-nome="' + esc(q) + '">Usar "' + esc(q) + '" mesmo assim</button>';
+  $('sugestoes').innerHTML = h;
+  if (daCamera && nomes.length && navigator.vibrate) navigator.vibrate(40);
+}
+
 /* ===== item ===== */
 /* com set+número do rodapé (Magic) ou número/total (Pokémon), tenta cravar a impressão */
 function tentarEdicaoExata(nome, rod){
