@@ -20,11 +20,11 @@ header h1{font-size:17px;margin:0;flex:1;font-family:Georgia,serif;letter-spacin
 main{max-width:720px;margin:0 auto;padding:12px 12px 40px}
 
 /* câmera */
-.cam{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--borda)}
+.cam{position:relative;background:#000;border-radius:14px;overflow:hidden;height:62vh;min-height:360px;border:1px solid var(--borda)}
 .cam video{width:100%;height:100%;object-fit:cover;display:block}
-.cam .mira{position:absolute;left:5%;right:5%;top:30%;height:26%;transition:all .2s;border:2px solid var(--ac2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
-.cam .mira::after{content:"encaixe o NOME da carta aqui";position:absolute;left:0;right:0;top:-24px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
-.cam.pequena .mira{left:8%;right:8%;top:36%;height:15%}
+.cam .mira{position:absolute;left:4%;right:4%;top:6%;height:40%;transition:all .2s;border:2px solid var(--ac2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
+.cam .mira::after{content:"encaixe a parte de cima da carta (o nome) aqui";position:absolute;left:0;right:0;top:-24px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
+.cam.pequena .mira{left:8%;right:8%;top:22%;height:14%}
 .cam .lido{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-size:13px;color:#fff;min-height:34px}
 .cam .lido b{color:var(--ac2)}
 .cam .semcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--txt2)}
@@ -189,7 +189,7 @@ function recorteMira(){
   var sx = (mb.left - box.left + offx) / escala, sy = (mb.top - box.top + offy) / escala;
   var sw = mb.width / escala, sh = mb.height / escala;
   var cv = document.createElement('canvas');
-  var alvoW = 1000; var f = alvoW / sw;
+  var alvoW = 900; var f = alvoW / sw;
   cv.width = alvoW; cv.height = Math.round(sh * f);
   var ctx = cv.getContext('2d');
   ctx.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
