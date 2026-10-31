@@ -37,6 +37,17 @@ button{font:inherit;cursor:pointer}
 .sug button{background:rgba(255,255,255,.95);color:#000;border:0;border-radius:14px;padding:14px 16px;font-size:17px;font-weight:600;text-align:left;display:flex;align-items:center;gap:10px}
 .sug button.hit{background:var(--ac2)}
 .sug button small{font-weight:400;color:#555;margin-left:auto;font-size:12px}
+.sug-linha{display:flex;gap:6px}
+.sug-linha > button:first-child{flex:1}
+.sug .liga-mini{flex:none;background:var(--azul);color:#fff;border:0;border-radius:14px;padding:0 14px;font-size:13px;font-weight:600}
+body.pk .sug .liga-mini{background:var(--verm)}
+.balao{position:fixed;left:12px;right:12px;bottom:34%;z-index:45;background:#000;border:1px solid var(--ac2);border-radius:16px;padding:10px 12px 10px 16px;display:flex;align-items:center;gap:12px;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.balao span{flex:1;min-width:0}
+.balao button{white-space:nowrap}
+.balao[hidden]{display:none}
+.balao b{color:var(--ac2)}
+.balao button{background:var(--azul);color:#fff;border:0;border-radius:10px;padding:9px 12px;font-weight:600}
+body.pk .balao button{background:var(--verm)}
 .sug button.sec{background:rgba(255,255,255,.18);color:#fff;font-weight:500;font-size:14px;padding:10px 14px}
 .ferr{display:flex;gap:6px;flex-wrap:wrap}
 .ferr button,.ferr label{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:7px 12px;font-size:13px}
@@ -141,6 +152,7 @@ button{font:inherit;cursor:pointer}
 </section>
 
 <div class="toast" id="toast"></div>
+<div class="balao" id="balao" hidden><span>✓ <b id="balaoNome"></b> na lista</span><button id="balaoLiga">Ver na Liga</button></div>
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-cab"><b id="sheetTit">Liga</b><a id="sheetFora" href="#" target="_blank" rel="noopener">Abrir fora ↗</a><button id="sheetFechar">Fechar ✕</button></div>
   <iframe id="sheetFrame" src="about:blank" referrerpolicy="no-referrer"></iframe>
@@ -430,7 +442,7 @@ function mostrarSugestoes(nomes, lido){
   sugAtuais = nomes;
   exataAtual = null;
   var h = '';
-  nomes.forEach(function(n, i){ h += '<button data-i="' + i + '" class="' + (i === 0 ? 'hit' : '') + '">' + esc(n) + '<small>' + (i === 0 ? 'toque pra adicionar' : '') + '</small></button>'; });
+  nomes.forEach(function(n, i){ h += '<div class="sug-linha"><button data-i="' + i + '" class="' + (i === 0 ? 'hit' : '') + '">' + esc(n) + '<small>' + (i === 0 ? 'toque pra adicionar' : '') + '</small></button><button class="liga-mini" data-liga-nome="' + esc(n) + '" title="ver na Liga sem adicionar">Liga ↗</button></div>'; });
   if (lido && nomes.length) h += '<button class="sec" data-livre="' + esc(lido) + '">li "' + esc(lido) + '" — usar assim mesmo</button>';
   $('sug').innerHTML = h;
   if (nomes.length && navigator.vibrate) navigator.vibrate(30);
@@ -470,8 +482,13 @@ function adicionarNome(nome, exata){
   if (!exata) enriquecer(it);
   ignorarNome = nome; ignorarAte = Date.now() + 6000; pausaAte = Date.now() + 1200;
   ultimoHit = ''; sugAtuais = []; exataAtual = null; $('sug').innerHTML = ''; $('nome').value = '';
-  toast('✓ ' + nome + ' (' + carrinho.length + ')');
+  mostrarBalao(it);
   if (navigator.vibrate) navigator.vibrate(60);
+}
+var balaoItem = null;
+function mostrarBalao(it){
+  balaoItem = it; $('balaoNome').textContent = it.nome; $('balao').hidden = false;
+  clearTimeout(mostrarBalao._t); mostrarBalao._t = setTimeout(function(){ $('balao').hidden = true; }, 5000);
 }
 function aplicarMagic(it, c, exata){
   it.nome = c.name; it.set = c.set || ''; it.num = c.collector_number || '';
@@ -504,7 +521,9 @@ function enriquecer(it){
   fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
     if (!j) { it._tentou = 0; return; }
     if (it.jogo === 'Magic') aplicarMagic(it, j, false);
-    else if (Array.isArray(j) && j.length) { aplicarPokemon(it, j[0], false); if (j.length > 1) it.ed += ' · ' + j.length + ' edições'; }
+    else if (Array.isArray(j) && j.length) {
+      return ordenarPokemon(j).then(function(l){ aplicarPokemon(it, l[0], false); if (l.length > 1) it.ed += ' · ' + l.length + ' edições'; salvar(); if ($('lista').classList.contains('on')) desenharLista(); });
+    }
     salvar(); if ($('lista').classList.contains('on')) desenharLista();
   }).catch(function(){});
 }
@@ -556,12 +575,32 @@ function carregarEdicoes(id){
   if (edicoesCache[chave]) { render(edicoesCache[chave]); return; }
   box.innerHTML = '<span class="ref">buscando edições…</span>';
   var url = it.jogo === 'Magic'
-    ? 'https://api.scryfall.com/cards/search?order=released&unique=prints&q=' + encodeURIComponent('!"' + it.nome + '"')
+    ? 'https://api.scryfall.com/cards/search?order=released&dir=desc&unique=prints&q=' + encodeURIComponent('!"' + it.nome + '"')
     : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(it.nome);
   fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
     var lista = it.jogo === 'Magic' ? (j && j.data ? j.data : []) : (Array.isArray(j) ? j : []);
-    edicoesCache[chave] = lista; render(lista);
+    if (it.jogo === 'Magic') { edicoesCache[chave] = lista; render(lista); return; }
+    return ordenarPokemon(lista).then(function(l){ edicoesCache[chave] = l; render(l); });
   }).catch(function(){ box.innerHTML = ''; });
+}
+/* datas de lançamento dos sets Pokémon (TCGdex), para ordenar do mais novo ao mais antigo */
+var setsPoke = null, carregandoSets = null;
+function getSetsPoke(){
+  if (setsPoke) return Promise.resolve(setsPoke);
+  try { var s = localStorage.getItem('balcao-sets-poke'); if (s) { setsPoke = JSON.parse(s); return Promise.resolve(setsPoke); } } catch (e) {}
+  if (carregandoSets) return carregandoSets;
+  carregandoSets = fetch('https://api.tcgdex.net/v2/en/sets').then(function(r){ return r.ok ? r.json() : []; }).then(function(arr){
+    var m = {}; (Array.isArray(arr) ? arr : []).forEach(function(s){ m[s.id] = s.releaseDate || ''; });
+    setsPoke = m; try { localStorage.setItem('balcao-sets-poke', JSON.stringify(m)); } catch (e) {}
+    return m;
+  }).catch(function(){ return {}; });
+  return carregandoSets;
+}
+function setDoId(id){ return id ? id.slice(0, id.lastIndexOf('-')) : ''; }
+function ordenarPokemon(lista){
+  return getSetsPoke().then(function(m){
+    return lista.slice().sort(function(a, b){ return String(m[setDoId(b.id)] || '').localeCompare(String(m[setDoId(a.id)] || '')); });
+  });
 }
 function mascaraDinheiro(inp){
   var d = String(inp.value || '').replace(/\D/g, '').replace(/^0+/, '');
@@ -623,7 +662,10 @@ function irPara(tela){
 document.addEventListener('click', function(ev){
   var t = ev.target;
   var js = t.closest('#jogoSel button');
-  if (js) { jogo = js.getAttribute('data-j'); document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b === js); }); ultimoHit = ''; $('sug').innerHTML = ''; return; }
+  if (js) { jogo = js.getAttribute('data-j'); document.body.classList.toggle('pk', jogo === 'Pokémon'); document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b === js); }); ultimoHit = ''; $('sug').innerHTML = ''; return; }
+  var lm = t.closest('.liga-mini');
+  if (lm) { var nm = lm.getAttribute('data-liga-nome'); abrirSheet(ligaUrlJogo(nm, jogo), nm); return; }
+  if (t.closest('#balaoLiga')) { if (balaoItem) abrirSheet(ligaUrlJogo(balaoItem.nome, balaoItem.jogo), balaoItem.nome); $('balao').hidden = true; return; }
   var sb = t.closest('#sug button');
   if (sb) {
     if (sb.hasAttribute('data-livre')) { adicionarNome(sb.getAttribute('data-livre'), null); return; }
