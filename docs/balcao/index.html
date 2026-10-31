@@ -25,6 +25,17 @@ main{max-width:720px;margin:0 auto;padding:12px 12px 40px}
 .cam .mira{position:absolute;left:4%;right:4%;top:6%;height:40%;transition:all .2s;border:2px solid var(--ac2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
 .cam .mira::after{content:"encaixe a parte de cima da carta (o nome) aqui";position:absolute;left:0;right:0;top:-24px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
 .cam.pequena .mira{left:8%;right:8%;top:22%;height:14%}
+.cam.inteira .mira{left:50%;right:auto;top:7%;height:85%;aspect-ratio:63/88;transform:translateX(-50%);border-radius:12px}
+.cam.inteira .mira::after{content:"encaixe a CARTA INTEIRA na moldura"}
+.cam .mira .z{display:none;position:absolute;border:1.5px dashed rgba(255,255,255,.85);border-radius:4px}
+.cam.inteira .mira .z{display:block}
+.cam .mira .z-nome{left:4%;right:4%;top:3%;height:9%}
+.cam .mira .z-set{left:3%;width:62%;bottom:1.5%;height:7%}
+.edicoes{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;margin:-6px 0 10px;-webkit-overflow-scrolling:touch}
+.edicoes button{flex:none;width:92px;background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:4px;color:var(--txt);font-size:10px;line-height:1.2;text-align:center}
+.edicoes button img{width:100%;border-radius:4px;display:block;margin-bottom:3px;background:#000;aspect-ratio:63/88;object-fit:cover}
+.edicoes button.on{border-color:var(--ac2);background:#2a2012}
+.edicoes .tit{flex:none;align-self:center;color:var(--txt2);font-size:12px;writing-mode:vertical-rl;transform:rotate(180deg)}
 .cam .lido{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-size:13px;color:#fff;min-height:34px}
 .cam .lido b{color:var(--ac2)}
 .cam .semcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--txt2)}
@@ -88,13 +99,14 @@ input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color
 <main>
   <div class="cam" id="cam">
     <video id="video" playsinline muted autoplay></video>
-    <div class="mira"></div>
+    <div class="mira"><div class="z z-nome"></div><div class="z z-set"></div></div>
     <div class="lido" id="lido">Ligando a câmera…</div>
   </div>
   <div class="ctrl">
     <button class="pri" id="btLer">Ler agora</button>
     <button id="btAuto">Auto: ligado</button>
     <button id="btTrocar">Trocar câmera</button>
+    <button id="btModo">Modo: nome</button>
     <button id="btCaixa">Caixa: grande</button>
     <label>📷 Foto<input type="file" id="foto" accept="image/*" capture="environment"></label>
   </div>
@@ -102,6 +114,7 @@ input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color
   <div class="status" id="status"></div>
   <div class="sugestoes" id="sugestoes"></div>
   <div id="item"></div>
+  <div class="edicoes" id="edicoes"></div>
   <div class="carrinho">
     <h3>Levando</h3>
     <div id="itens"><div class="status">Nada ainda.</div></div>
@@ -180,18 +193,20 @@ function getWorker(){
     return w.setParameters({tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'-,. ", tessedit_pageseg_mode: '6'}).then(function(){ status(''); return w; });
   });
 }
-function recorteMira(){
+var modo = 'nome';
+function recorteMira(){ return recorteDe($('cam').querySelector('.mira'), 900); }
+function recorteDe(el, alvoW){
   var v = $('video');
   if (!v.videoWidth) return null;
-  /* recorta exatamente a área da mira (object-fit:cover) */
-  var box = $('cam').getBoundingClientRect(), mb = $('cam').querySelector('.mira').getBoundingClientRect();
+  /* recorta exatamente a área do elemento (object-fit:cover) */
+  var box = $('cam').getBoundingClientRect(), mb = el.getBoundingClientRect();
   var escala = Math.max(box.width / v.videoWidth, box.height / v.videoHeight);
   var vw = v.videoWidth * escala, vh = v.videoHeight * escala;
   var offx = (vw - box.width) / 2, offy = (vh - box.height) / 2;
   var sx = (mb.left - box.left + offx) / escala, sy = (mb.top - box.top + offy) / escala;
   var sw = mb.width / escala, sh = mb.height / escala;
   var cv = document.createElement('canvas');
-  var alvoW = 900; var f = alvoW / sw;
+  var f = alvoW / sw;
   cv.width = alvoW; cv.height = Math.round(sh * f);
   var ctx = cv.getContext('2d');
   ctx.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
@@ -212,17 +227,45 @@ function limparTexto(t){
   var ruido = /^(basic|stage|evolves|from|hp|creature|instant|sorcery|enchantment|artifact|land|legendary|planeswalker|pokemon|ex|gx|the)$/i;
   return t.split(' ').filter(function(w){ return w.length > 1 && !ruido.test(w); }).join(' ').trim();
 }
+var workerSet = null;
+function getWorkerSet(){
+  if (workerSet) return Promise.resolve(workerSet);
+  if (typeof Tesseract === 'undefined') return Promise.reject(new Error('leitor não carregou'));
+  return Tesseract.createWorker('eng').then(function(w){
+    workerSet = w;
+    return w.setParameters({tessedit_char_whitelist: '0123456789/ABCDEFGHIJKLMNOPQRSTUVWXYZ ', tessedit_pageseg_mode: '6'}).then(function(){ return w; });
+  });
+}
+/* rodapé: Magic "0238 M HOB PT" / "238/300 R DOM EN" ; Pokémon "025/165" */
+function interpretarRodape(t){
+  t = String(t || '').toUpperCase().replace(/\s+/g, ' ').trim();
+  var out = {};
+  var mp = t.match(/(\d{1,3})\s*\/\s*(\d{1,3})/);
+  if (mp) { out.num = mp[1]; out.total = mp[2]; }
+  var mn = t.match(/(?:^|\s)0*(\d{1,4})(?:\s*\/\s*0*\d{1,4})?(?=\s|$)/);
+  if (mn && !out.num) out.num = mn[1];
+  var toks = t.split(' ').filter(function(x){ return /^[A-Z0-9]{3}$/.test(x) && !/^\d+$/.test(x) && !/^(THE|AND|ART|ILL|TM|INC|LLC)$/.test(x); });
+  if (toks.length) out.set = toks[toks.length - 1].toLowerCase();
+  return out;
+}
+var ultimoRodape = '';
+var pausaAte = 0, ignorarNome = '', ignorarAte = 0;
 function lerQuadro(){
-  if (lendo || itemAtual) return Promise.resolve();
-  var cv = recorteMira();
+  if (lendo || itemAtual || Date.now() < pausaAte) return Promise.resolve();
+  var cv = modo === 'inteira' ? recorteDe($('cam').querySelector('.z-nome'), 900) : recorteMira();
   if (!cv) return Promise.resolve();
   lendo = true;
+  var rodape = modo === 'inteira' ? recorteDe($('cam').querySelector('.z-set'), 700) : null;
+  var pRod = rodape ? getWorkerSet().then(function(w){ return w.recognize(rodape); }).then(function(r){ return interpretarRodape(r.data.text); }).catch(function(){ return {}; }) : Promise.resolve({});
   return getWorker().then(function(w){ return w.recognize(cv); }).then(function(r){
+    return pRod.then(function(rod){ rodapeAtual = rod; return r; });
+  }).then(function(r){
     var linhas = (r.data.lines || []).map(function(l){ return {t: limparTexto(l.text), c: l.confidence || 0}; })
       .filter(function(l){ return l.t.length >= 3 && l.c >= 35; })
       .sort(function(a, b){ return b.c - a.c; }).slice(0, 3);
     if (!linhas.length) { $('lido').textContent = 'Mire o nome da carta no retângulo…'; return; }
-    $('lido').innerHTML = 'Li: <b>' + esc(linhas[0].t) + '</b> (' + Math.round(linhas[0].c) + '%)';
+    var rodTxt = (rodapeAtual.set || rodapeAtual.num) ? ' · rodapé: ' + (rodapeAtual.set ? rodapeAtual.set.toUpperCase() + ' ' : '') + (rodapeAtual.num || '') + (rodapeAtual.total ? '/' + rodapeAtual.total : '') : '';
+    $('lido').innerHTML = 'Li: <b>' + esc(linhas[0].t) + '</b> (' + Math.round(linhas[0].c) + '%)' + esc(rodTxt);
     return validarLinhas(linhas.map(function(l){ return l.t; }));
   }).catch(function(e){ status('Erro no leitor: ' + (e && e.message ? e.message : e)); }).then(function(){ lendo = false; });
 }
@@ -233,6 +276,7 @@ function loopAuto(){
 /* só troca as sugestões quando alguma linha lida bate com nome de carta de verdade */
 var cacheNomes = {};
 var ultimoHit = '';
+var rodapeAtual = {};
 function validarLinhas(linhas){
   var i = 0;
   return new Promise(function(res){
@@ -241,8 +285,12 @@ function validarLinhas(linhas){
       var l = linhas[i++];
       var p = cacheNomes[l] ? Promise.resolve(cacheNomes[l]) : consultarNomes(l).then(function(n){ cacheNomes[l] = n; return n; });
       p.then(function(nomes){
+        if (nomes.length && nomes[0] === ignorarNome && Date.now() < ignorarAte) { res(true); return; }
         if (nomes.length) {
-          if (nomes[0] !== ultimoHit) { ultimoHit = nomes[0]; $('nome').value = l; desenharSugestoes(nomes, l, true); }
+          if (nomes[0] !== ultimoHit) {
+            ultimoHit = nomes[0]; $('nome').value = l; desenharSugestoes(nomes, l, true);
+            if (modo === 'inteira') tentarEdicaoExata(nomes[0], rodapeAtual);
+          }
           res(true);
         } else prox();
       });
@@ -315,10 +363,85 @@ function desenharSugestoes(nomes, q, daCamera){
 }
 
 /* ===== item ===== */
+/* com set+número do rodapé (Magic) ou número/total (Pokémon), tenta cravar a impressão */
+function tentarEdicaoExata(nome, rod){
+  if (!rod) return;
+  if (jogo === 'Magic' && rod.set && rod.num) {
+    fetch('https://api.scryfall.com/cards/' + encodeURIComponent(rod.set) + '/' + encodeURIComponent(rod.num)).then(function(r){ return r.ok ? r.json() : null; }).then(function(c){
+      if (!c || !c.name) return;
+      if (c.name.toLowerCase().indexOf(nome.toLowerCase().split(' ')[0]) < 0 && nome.toLowerCase().indexOf(c.name.toLowerCase().split(' ')[0]) < 0) return;
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+      escolherCartaMagic(c, true);
+    }).catch(function(){});
+  } else if (jogo === 'Pokémon' && rod.num) {
+    fetch('https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome) + '&localId=' + encodeURIComponent(String(parseInt(rod.num, 10)))).then(function(r){ return r.ok ? r.json() : null; }).then(function(arr){
+      if (!Array.isArray(arr) || arr.length !== 1) return;
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+      escolherCartaPokemon(arr[0], true);
+    }).catch(function(){});
+  }
+}
+function escolherCartaMagic(c, exata){
+  itemAtual = {nome: c.name, img: '', ed: '', set: c.set, num: c.collector_number};
+  itemAtual.img = c.image_uris ? c.image_uris.normal : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.normal : '');
+  var usd = c.prices ? parseFloat(c.prices.usd || c.prices.usd_foil || 0) : 0;
+  var eur = c.prices ? parseFloat(c.prices.eur || c.prices.eur_foil || 0) : 0;
+  var ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
+  var refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
+  itemAtual.ed = (c.set_name || '') + ' · #' + (c.collector_number || '') + (exata ? ' · lida do rodapé' : '');
+  guardarItem(); desenharItem();
+  if (ref) aplicarRef(ref, refTxt);
+  marcarEdicaoAtiva();
+}
+function escolherCartaPokemon(c, exata){
+  itemAtual = {nome: c.name, img: c.image ? c.image + '/high.webp' : '', ed: (c.id || '').toUpperCase() + (exata ? ' · lida do rodapé' : ''), set: c.id ? c.id.slice(0, c.id.lastIndexOf('-')) : '', num: c.localId || ''};
+  guardarItem(); desenharItem(); marcarEdicaoAtiva();
+  fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(c.id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    if (!d || !itemAtual || itemAtual.num !== (c.localId || '')) return;
+    if (d.set && d.set.name && $('edItem')) { itemAtual.ed = d.set.name + ' · #' + (c.localId || '') + (exata ? ' · lida do rodapé' : ''); $('edItem').textContent = itemAtual.ed; }
+    if (d.pricing) {
+      var cm = d.pricing.cardmarket, tp = d.pricing.tcgplayer, v = 0, t = '';
+      if (cm && (cm.trend || cm.avg)) { v = emReais(cm.trend || cm.avg, 'EUR'); t = '€ ' + (cm.trend || cm.avg).toFixed(2); }
+      else if (tp) { var k = Object.keys(tp)[0]; var m = k && tp[k] ? (tp[k].marketPrice || tp[k].midPrice) : 0; if (m) { v = emReais(m, 'USD'); t = 'US$ ' + m.toFixed(2); } }
+      if (v) aplicarRef(v, t);
+    }
+  }).catch(function(){});
+}
+var edicoesCache = [];
+function listarEdicoes(nome){
+  $('edicoes').innerHTML = '<span class="status">buscando edições…</span>';
+  var url = jogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/search?order=released&unique=prints&q=' + encodeURIComponent('!"' + nome + '"')
+    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
+  fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if (!itemAtual || itemAtual.nome !== nome) return;
+    var lista = jogo === 'Magic' ? (j && j.data ? j.data : []) : (Array.isArray(j) ? j : []);
+    edicoesCache = lista;
+    if (lista.length <= 1) { $('edicoes').innerHTML = ''; return; }
+    var h = '<span class="tit">edições</span>';
+    lista.slice(0, 40).forEach(function(c, i){
+      var img = jogo === 'Magic' ? (c.image_uris ? c.image_uris.small : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.small : '')) : (c.image ? c.image + '/low.webp' : '');
+      var rot = jogo === 'Magic' ? (c.set || '').toUpperCase() + ' #' + c.collector_number : (c.id || '').toUpperCase();
+      var sub = jogo === 'Magic' ? (c.set_name || '') : '';
+      h += '<button data-i="' + i + '" title="' + esc(sub) + '"><img loading="lazy" src="' + esc(img) + '" alt="">' + esc(rot) + '</button>';
+    });
+    $('edicoes').innerHTML = h;
+    marcarEdicaoAtiva();
+  }).catch(function(){ $('edicoes').innerHTML = ''; });
+}
+function marcarEdicaoAtiva(){
+  var bs = document.querySelectorAll('#edicoes button');
+  for (var i = 0; i < bs.length; i++) {
+    var c = edicoesCache[Number(bs[i].getAttribute('data-i'))];
+    var ativo = itemAtual && c && (jogo === 'Magic' ? (c.set === itemAtual.set && c.collector_number === itemAtual.num) : (c.id && itemAtual.set + '-' + itemAtual.num === c.id));
+    bs[i].classList.toggle('on', !!ativo);
+  }
+}
 function escolherNome(nome){
   itemAtual = {nome: nome, img: '', ed: ''};
   guardarItem();
   desenharItem();
+  listarEdicoes(nome);
   var url = jogo === 'Magic'
     ? 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(nome)
     : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
@@ -331,11 +454,13 @@ function escolherNome(nome){
       var eur = j.prices ? parseFloat(j.prices.eur || j.prices.eur_foil || 0) : 0;
       ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
       refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
-      itemAtual.ed = (j.set_name || '') + (refTxt ? ' · mercado intl. ' + refTxt : '');
+      itemAtual.set = j.set; itemAtual.num = j.collector_number;
+      itemAtual.ed = (j.set_name || '') + ' · #' + (j.collector_number || '') + (refTxt ? ' · mercado intl. ' + refTxt : '');
     } else {
       var c = Array.isArray(j) ? j[0] : null;
       if (c && c.image) itemAtual.img = c.image + '/high.webp';
-      itemAtual.ed = Array.isArray(j) ? j.length + ' impressões conhecidas' : '';
+      if (c && c.id) { itemAtual.set = c.id.slice(0, c.id.lastIndexOf('-')); itemAtual.num = c.localId || ''; }
+      itemAtual.ed = Array.isArray(j) ? j.length + ' edições — toque na certa abaixo' : '';
       if (c && c.id) {
         fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(c.id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
           if (!d || !d.pricing || !itemAtual || itemAtual.nome !== nome) return;
@@ -352,9 +477,7 @@ function escolherNome(nome){
   }).catch(function(){});
 }
 function aplicarRef(v, txt){
-  var inp = $('precoItem'); if (!inp) return;
-  if (!inp.value) inp.value = v.toFixed(2).replace('.', ',');
-  var r = $('refItem'); if (r) r.textContent = 'ref. ' + dinheiro(v) + (txt ? ' (' + txt + ' × câmbio do dia)' : '');
+  var r = $('refItem'); if (r) r.textContent = 'referência internacional: ' + dinheiro(v) + (txt ? ' (' + txt + ' × câmbio)' : '') + ' — digite o preço da Liga';
 }
 /* máscara de dinheiro estilo maquininha: só digitos, centavos entram pela direita (1250 → 12,50) */
 function mascaraDinheiro(inp){
@@ -394,9 +517,11 @@ function guardarItem(){ try { if (itemAtual) sessionStorage.setItem('balcao-item
 function adicionar(){
   if (!itemAtual) return;
   var p = lerPreco($('precoItem').value), q = parseInt($('qtdItem').value, 10) || 1;
-  carrinho.push({nome: itemAtual.nome, jogo: jogo, preco: p, qtd: q});
+  carrinho.push({nome: itemAtual.nome, jogo: jogo, preco: p, qtd: q, ed: (itemAtual.set ? itemAtual.set.toUpperCase() + (itemAtual.num ? ' #' + itemAtual.num : '') : '')});
+  $('edicoes').innerHTML = '';
+  ignorarNome = itemAtual.nome; ignorarAte = Date.now() + 6000; pausaAte = Date.now() + 1500;
   itemAtual = null; ultimoTexto = ''; ultimaBusca = ''; ultimoHit = ''; guardarItem();
-  $('sugestoes').innerHTML = ''; $('nome').value = ''; status('');
+  $('sugestoes').innerHTML = ''; $('nome').value = ''; status('Próxima carta…');
   salvar(); desenharCarrinho(); desenharItem(); toast('Adicionado');
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -405,7 +530,7 @@ function desenharCarrinho(){
   var h = '', tot = 0;
   carrinho.forEach(function(it, i){
     var sub = it.preco * it.qtd; tot += sub;
-    h += '<div class="it"><span class="nm">' + esc(it.nome) + (it.qtd > 1 ? ' ×' + it.qtd : '') + '</span><span class="vl">' + dinheiro(sub) + '</span><button class="rm" data-i="' + i + '">✕</button></div>';
+    h += '<div class="it"><span class="nm">' + esc(it.nome) + (it.ed ? ' <small style="color:var(--txt2)">' + esc(it.ed) + '</small>' : '') + (it.qtd > 1 ? ' ×' + it.qtd : '') + '</span><span class="vl">' + dinheiro(sub) + '</span><button class="rm" data-i="' + i + '">✕</button></div>';
   });
   $('itens').innerHTML = h || '<div class="status">Nada ainda.</div>';
   $('total').textContent = dinheiro(tot);
@@ -420,7 +545,7 @@ function textoLista(){
   var linhas = ['*Lista de cartas* — ' + d.toLocaleDateString('pt-BR') + ' ' + d.toTimeString().slice(0, 5), ''];
   carrinho.forEach(function(it, i){
     var s = it.preco * it.qtd; tot += s;
-    linhas.push((i + 1) + '. *' + it.nome + '*' + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s));
+    linhas.push((i + 1) + '. *' + it.nome + '*' + (it.ed ? ' (' + it.ed + ')' : '') + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s));
     linhas.push('   ' + ligaUrlJogo(it.nome, it.jogo));
   });
   linhas.push('', '*TOTAL: ' + dinheiro(tot) + '*', '', '(valores anotados no balcão; links para conferência na Liga)');
@@ -447,10 +572,13 @@ document.addEventListener('click', function(ev){
   var lb = ev.target.closest('#ligaBtn');
   if (lb) { ev.preventDefault(); abrirSheet(lb.getAttribute('href'), itemAtual ? itemAtual.nome : 'Liga'); return; }
   if (ev.target.closest('#sheetFechar')) { fecharSheet(); return; }
+  if (ev.target.closest('#btModo')) { modo = modo === 'nome' ? 'inteira' : 'nome'; $('cam').classList.toggle('inteira', modo === 'inteira'); $('btModo').textContent = 'Modo: ' + (modo === 'inteira' ? 'carta inteira' : 'nome'); $('btCaixa').style.display = modo === 'inteira' ? 'none' : ''; ultimoHit = ''; return; }
+  var ed = ev.target.closest('#edicoes button');
+  if (ed) { var cc = edicoesCache[Number(ed.getAttribute('data-i'))]; if (cc) { if (jogo === 'Magic') escolherCartaMagic(cc, false); else escolherCartaPokemon(cc, false); } return; }
   if (ev.target.closest('#btCaixa')) { var c = $('cam'); c.classList.toggle('pequena'); $('btCaixa').textContent = 'Caixa: ' + (c.classList.contains('pequena') ? 'pequena' : 'grande'); return; }
   if (ev.target.closest('#addItem')) { adicionar(); return; }
   if (ev.target.closest('#colarItem')) { colarPreco(); return; }
-  if (ev.target.closest('#cancItem')) { itemAtual = null; ultimoTexto = ''; ultimoHit = ''; guardarItem(); desenharItem(); return; }
+  if (ev.target.closest('#cancItem')) { itemAtual = null; ultimoTexto = ''; ultimoHit = ''; guardarItem(); desenharItem(); $('edicoes').innerHTML = ''; return; }
   var rm = ev.target.closest('.carrinho .rm');
   if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); salvar(); desenharCarrinho(); return; }
   if (ev.target.closest('#copiar')) { copiar(); return; }
