@@ -3,160 +3,182 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0c0a09">
+<meta name="theme-color" content="#000">
 <title>Balcão — Grimório</title>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 :root{--bg:#0c0a09;--bg2:#17120f;--card:#1f1915;--borda:#3a2e26;--txt:#f1e6d6;--txt2:#a89a88;--ac:#ff8a2a;--ac2:#ffc247;--ok:#4cd17a;--azul:#1e5bd8;--verm:#d62828}
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;height:100%}
 button{font:inherit;cursor:pointer}
-header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:5}
-header h1{font-size:17px;margin:0;flex:1;font-family:Georgia,serif;letter-spacing:3px;text-transform:uppercase}
-.jogo-sel{display:flex;border:1px solid var(--borda);border-radius:20px;overflow:hidden}
-.jogo-sel button{background:var(--card);border:0;color:var(--txt2);padding:6px 12px;font-size:13px}
-.jogo-sel button.on{background:var(--ac);color:#000;font-weight:600}
-main{max-width:720px;margin:0 auto;padding:12px 12px 40px}
+.tela{display:none}.tela.on{display:block}
 
-/* câmera */
-.cam{position:relative;background:#000;border-radius:14px;overflow:hidden;height:62vh;min-height:360px;border:1px solid var(--borda)}
-.cam video{width:100%;height:100%;object-fit:cover;display:block}
-.cam .mira{position:absolute;left:4%;right:4%;top:6%;height:40%;transition:all .2s;border:2px solid var(--ac2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
-.cam .mira::after{content:"encaixe a parte de cima da carta (o nome) aqui";position:absolute;left:0;right:0;top:-24px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
-.cam.pequena .mira{left:8%;right:8%;top:22%;height:14%}
-.cam.inteira .mira{left:50%;right:auto;top:7%;height:85%;aspect-ratio:63/88;transform:translateX(-50%);border-radius:12px}
-.cam.inteira .mira::after{content:"encaixe a CARTA INTEIRA na moldura"}
-.cam .mira .z{display:none;position:absolute;border:1.5px dashed rgba(255,255,255,.85);border-radius:4px}
-.cam.inteira .mira .z{display:block}
-.cam .mira .z-nome{left:4%;right:4%;top:3%;height:9%}
-.cam .mira .z-set{left:3%;width:62%;bottom:1.5%;height:7%}
-.edicoes{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px;margin:-6px 0 10px;-webkit-overflow-scrolling:touch}
-.edicoes button{flex:none;width:92px;background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:4px;color:var(--txt);font-size:10px;line-height:1.2;text-align:center}
+/* ===== TELA SCANNER (câmera cheia) ===== */
+#scan{position:fixed;inset:0;background:#000}
+#cam{position:absolute;inset:0}
+#video{width:100%;height:100%;object-fit:cover;display:block}
+.mira{position:absolute;left:5%;right:5%;top:12%;height:34%;border:2px solid var(--ac2);border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none;transition:all .2s}
+.mira::after{content:"encaixe o NOME da carta aqui";position:absolute;left:0;right:0;top:-26px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
+#cam.inteira .mira{left:50%;right:auto;top:11%;height:70%;aspect-ratio:63/88;transform:translateX(-50%);border-radius:12px}
+#cam.inteira .mira::after{content:"encaixe a CARTA INTEIRA na moldura"}
+.mira .z{display:none;position:absolute;border:1.5px dashed rgba(255,255,255,.85);border-radius:4px}
+#cam.inteira .mira .z{display:block}
+.mira .z-nome{left:4%;right:4%;top:3%;height:9%}
+.mira .z-set{left:3%;width:62%;bottom:1.5%;height:7%}
+.semcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--txt2)}
+
+.topo{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px;display:flex;align-items:center;gap:8px;background:linear-gradient(rgba(0,0,0,.75),transparent);z-index:3}
+.jogo-sel{display:flex;border:1px solid rgba(255,255,255,.3);border-radius:20px;overflow:hidden;background:rgba(0,0,0,.4)}
+.jogo-sel button{background:transparent;border:0;color:#ddd;padding:7px 12px;font-size:13px}
+.jogo-sel button.on{background:var(--ac);color:#000;font-weight:600}
+.topo .esp{flex:1}
+.btn-lista{background:var(--ac2);color:#000;border:0;border-radius:20px;padding:9px 14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.btn-lista .n{background:#000;color:var(--ac2);border-radius:12px;padding:1px 8px;font-size:13px}
+
+.lido{position:absolute;left:10px;right:10px;top:calc(env(safe-area-inset-top) + 60px);z-index:3;font-size:12px;color:#fff;text-shadow:0 0 6px #000;opacity:.9}
+.lido b{color:var(--ac2)}
+
+.rodape{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(env(safe-area-inset-bottom) + 12px);z-index:3;background:linear-gradient(transparent,rgba(0,0,0,.85) 40%)}
+.sug{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:46vh;overflow:auto}
+.sug button{background:rgba(255,255,255,.95);color:#000;border:0;border-radius:14px;padding:14px 16px;font-size:17px;font-weight:600;text-align:left;display:flex;align-items:center;gap:10px}
+.sug button.hit{background:var(--ac2)}
+.sug button small{font-weight:400;color:#555;margin-left:auto;font-size:12px}
+.sug button.sec{background:rgba(255,255,255,.18);color:#fff;font-weight:500;font-size:14px;padding:10px 14px}
+.ferr{display:flex;gap:6px;flex-wrap:wrap}
+.ferr button,.ferr label{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:7px 12px;font-size:13px}
+.ferr label input{display:none}
+.digitar{display:none;position:absolute;left:0;right:0;bottom:0;z-index:4;background:var(--bg2);padding:12px 12px calc(env(safe-area-inset-bottom) + 12px);border-top:1px solid var(--borda)}
+.digitar.on{display:block}
+.digitar input{width:100%;background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:12px 14px;font-size:17px}
+.digitar .fechar{position:absolute;right:12px;top:-40px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:16px;padding:6px 12px}
+.status{color:var(--txt2);font-size:12px;min-height:16px;margin-top:6px}
+
+/* ===== TELA LISTA ===== */
+#lista{min-height:100%;padding-bottom:40px}
+#lista header{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:var(--bg2);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:5}
+#lista header h1{font-size:17px;margin:0;flex:1;font-family:Georgia,serif;letter-spacing:3px;text-transform:uppercase}
+.voltar{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:7px 12px}
+.itens{padding:12px}
+.it{background:var(--card);border:1px solid var(--borda);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.it.ok{border-color:rgba(76,209,122,.6)}
+.it .cab{display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer}
+.it .cab img{width:44px;aspect-ratio:63/88;object-fit:cover;border-radius:4px;background:#000}
+.it .cab .nm{flex:1;min-width:0}
+.it .cab .nm b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .cab .nm small{color:var(--txt2);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.it .cab .vl{color:var(--ac2);font-weight:700;white-space:nowrap}
+.it .cab .vl.sem{color:var(--txt2);font-weight:400;font-size:13px}
+.it .corpo{display:none;padding:0 12px 12px;border-top:1px solid var(--borda)}
+.it.aberto .corpo{display:block}
+.it .corpo .ed{color:var(--txt2);font-size:12px;margin:10px 0 8px}
+.it a.liga{display:block;background:var(--azul);color:#fff;text-decoration:none;border-radius:8px;padding:11px 12px;font-weight:600;text-align:center;margin-bottom:10px}
+.it a.liga.pk{background:var(--verm)}
+.it .preco{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.it .preco input{width:120px;background:var(--bg);border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:10px;font-size:18px}
+.it .preco input.qtd{width:60px}
+.it .preco button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:10px 12px}
+.it .preco button.rm{color:#f88;border-color:#633}
+.it .ref{color:var(--txt2);font-size:12px;margin-top:8px}
+.edicoes{display:flex;gap:8px;overflow-x:auto;padding:8px 0 4px;-webkit-overflow-scrolling:touch}
+.edicoes button{flex:none;width:86px;background:var(--bg);border:1px solid var(--borda);border-radius:8px;padding:4px;color:var(--txt);font-size:10px;line-height:1.2;text-align:center}
 .edicoes button img{width:100%;border-radius:4px;display:block;margin-bottom:3px;background:#000;aspect-ratio:63/88;object-fit:cover}
 .edicoes button.on{border-color:var(--ac2);background:#2a2012}
-.edicoes .tit{flex:none;align-self:center;color:var(--txt2);font-size:12px;writing-mode:vertical-rl;transform:rotate(180deg)}
-.cam .lido{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-size:13px;color:#fff;min-height:34px}
-.cam .lido b{color:var(--ac2)}
-.cam .semcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--txt2)}
-.ctrl{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
-.ctrl button{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:8px 14px}
-.ctrl button.pri{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
-.ctrl label{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:8px 14px;cursor:pointer}
-.ctrl label input{display:none}
-input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:10px 14px;font-size:16px;margin-bottom:8px}
-.status{color:var(--txt2);font-size:13px;min-height:18px;margin-bottom:8px}
-.sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
-.sugestoes button{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:16px;padding:7px 12px;font-size:14px}
-.sugestoes button.hit{border-color:var(--ac2);background:#2a2012}
+.resumo{margin:6px 12px;background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px}
+.resumo .tot{display:flex;justify-content:space-between;align-items:center;font-size:18px}
+.resumo .tot b{color:var(--ac2);font-size:24px}
+.resumo .pend{color:var(--txt2);font-size:12px;margin-top:4px}
+.resumo .acoes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.resumo .acoes button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 12px}
+.resumo .acoes button.zap{background:#25d366;border-color:#25d366;color:#000;font-weight:700}
+.vazio{padding:40px 20px;text-align:center;color:var(--txt2)}
 
-/* item */
-.item{background:var(--card);border:1px solid var(--ac);border-radius:14px;padding:12px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start}
-.item img{width:96px;border-radius:6px;background:#000}
-.item .campos{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-.item .campos b{font-size:16px}
-.item .campos .ed{color:var(--txt2);font-size:12px}
-.item a.liga{display:block;background:var(--azul);color:#fff;text-decoration:none;border-radius:8px;padding:10px 12px;font-weight:600;text-align:center}
-.item a.liga.pk{background:var(--verm)}
-.item .preco{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.item .preco input{width:110px;background:var(--bg);border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:17px}
-.item .preco input.qtd{width:58px}
-.item .colar{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 10px}
-.item .add{background:var(--ok);color:#000;font-weight:700;border:0;border-radius:8px;padding:10px 14px}
-.item .canc{background:transparent;border:1px solid var(--borda);color:var(--txt2);border-radius:8px;padding:10px 12px}
-
-/* carrinho */
-.carrinho{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px}
-.carrinho h3{margin:0 0 8px;font-size:13px;color:var(--txt2);text-transform:uppercase;letter-spacing:1px}
-.carrinho .it{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--borda);font-size:14px}
-.carrinho .it:last-child{border-bottom:0}
-.carrinho .it .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.carrinho .it .vl{color:var(--ac2);font-weight:600}
-.carrinho .it .rm{background:transparent;border:0;color:var(--txt2);font-size:18px;padding:0 6px}
-.carrinho .tot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:18px}
-.carrinho .tot b{color:var(--ac2);font-size:24px}
-.carrinho .acoes{display:flex;gap:8px;margin-top:10px}
-.carrinho .acoes{flex-wrap:wrap}
-.carrinho .acoes button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:8px 12px}
-.carrinho .acoes button.zap{background:#25d366;border-color:#25d366;color:#000;font-weight:700}
 .sheet{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column}
 .sheet[hidden]{display:none}
-.sheet-cab{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-bottom:1px solid var(--borda)}
+.sheet-cab{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 12px 10px;background:var(--bg2);border-bottom:1px solid var(--borda)}
 .sheet-cab b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sheet-cab a{color:var(--ac2);text-decoration:none;font-size:14px}
 .sheet-cab button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:6px 10px}
 .sheet iframe{flex:1;border:0;background:#fff}
 .sheet-aviso{padding:6px 12px;font-size:12px;color:var(--txt2);background:var(--bg2)}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
-.toast.on{opacity:.95}
+.toast{position:fixed;left:50%;bottom:30%;transform:translateX(-50%);background:#000;color:#fff;padding:10px 16px;border-radius:20px;font-size:15px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;border:1px solid var(--ac2)}
+.toast.on{opacity:.96}
 </style>
 </head>
 <body>
-<header>
-  <h1>Balcão</h1>
-  <div class="jogo-sel" id="jogoSel"><button data-j="Magic" class="on">Magic</button><button data-j="Pokémon">Pokémon</button></div>
-</header>
-<main>
-  <div class="cam" id="cam">
+
+<!-- ===== SCANNER ===== -->
+<section id="scan" class="tela on">
+  <div id="cam">
     <video id="video" playsinline muted autoplay></video>
     <div class="mira"><div class="z z-nome"></div><div class="z z-set"></div></div>
-    <div class="lido" id="lido">Ligando a câmera…</div>
   </div>
-  <div class="ctrl">
-    <button class="pri" id="btLer">Ler agora</button>
-    <button id="btAuto">Auto: ligado</button>
-    <button id="btTrocar">Trocar câmera</button>
-    <button id="btModo">Modo: nome</button>
-    <button id="btCaixa">Caixa: grande</button>
-    <label>📷 Foto<input type="file" id="foto" accept="image/*" capture="environment"></label>
+  <div class="topo">
+    <div class="jogo-sel" id="jogoSel"><button data-j="Magic" class="on">Magic</button><button data-j="Pokémon">Pokémon</button></div>
+    <span class="esp"></span>
+    <button class="btn-lista" id="irLista">Lista <span class="n" id="contador">0</span></button>
   </div>
-  <input class="nome" id="nome" placeholder="ou digite o nome da carta">
-  <div class="status" id="status"></div>
-  <div class="sugestoes" id="sugestoes"></div>
-  <div id="item"></div>
-  <div class="edicoes" id="edicoes"></div>
-  <div class="carrinho">
-    <h3>Levando</h3>
-    <div id="itens"><div class="status">Nada ainda.</div></div>
+  <div class="lido" id="lido">Ligando a câmera…</div>
+  <div class="rodape">
+    <div class="sug" id="sug"></div>
+    <div class="ferr">
+      <button id="btDigitar">⌨ Digitar</button>
+      <button id="btLer">Ler agora</button>
+      <button id="btAuto">Auto: ligado</button>
+      <button id="btModo">Modo: nome</button>
+      <button id="btTrocar">Trocar câmera</button>
+      <label>📷 Foto<input type="file" id="foto" accept="image/*" capture="environment"></label>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="digitar" id="digitar">
+    <button class="fechar" id="fecharDigitar">fechar ✕</button>
+    <input id="nome" placeholder="nome da carta (pode errar letra)" autocomplete="off">
+  </div>
+</section>
+
+<!-- ===== LISTA ===== -->
+<section id="lista" class="tela">
+  <header><button class="voltar" id="irScan">⟵ Scanner</button><h1>Lista</h1></header>
+  <div class="itens" id="itens"></div>
+  <div class="resumo">
     <div class="tot"><span>Total</span><b id="total">R$ 0,00</b></div>
-    <div class="acoes"><button id="whats" class="zap">Enviar no WhatsApp</button><button id="copiar">Copiar lista</button><button id="limpar">Limpar</button></div>
+    <div class="pend" id="pend"></div>
+    <div class="acoes"><button class="zap" id="whats">Enviar no WhatsApp</button><button id="copiar">Copiar</button><button id="limpar">Limpar tudo</button></div>
   </div>
-</main>
+</section>
+
 <div class="toast" id="toast"></div>
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-cab"><b id="sheetTit">Liga</b><a id="sheetFora" href="#" target="_blank" rel="noopener">Abrir fora ↗</a><button id="sheetFechar">Fechar ✕</button></div>
   <iframe id="sheetFrame" src="about:blank" referrerpolicy="no-referrer"></iframe>
-  <div class="sheet-aviso">Se a Liga não aparecer aqui dentro (ela pode bloquear), use "Abrir fora".</div>
+  <div class="sheet-aviso">Se a Liga não aparecer aqui dentro, use "Abrir fora".</div>
 </div>
 
 <script>
 /* ===== estado ===== */
 var jogo = 'Magic';
-var carrinho = [];
-var itemAtual = null;
-var auto = true;
-var lendo = false;
-var ultimoTexto = '';
-var worker = null;
-var stream = null;
-var usarFrontal = false;
-var buscaTimer = null;
-var ultimaBusca = '';
+var carrinho = [];           /* {id, nome, jogo, set, num, img, ed, preco, qtd, ref, refTxt} */
+var auto = true, lendo = false, worker = null, stream = null, usarFrontal = false, buscaTimer = null;
+var modo = 'nome';
+var pausaAte = 0, ignorarNome = '', ignorarAte = 0;
+var ultimoHit = '', rodapeAtual = {}, cacheNomes = {};
+var sugAtuais = [];           /* nomes mostrados nos botões */
+var exataAtual = null;        /* carta exata vinda do rodapé {tipo, dados} */
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
-function dinheiro(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
+function dinheiro(v){ return 'R$ ' + (v || 0).toFixed(2).replace('.', ','); }
 function lerPreco(s){ s = String(s || '').replace(/[^0-9,\.]/g, ''); if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.'); var v = parseFloat(s); return isNaN(v) ? 0 : v; }
 function status(t){ $('status').textContent = t || ''; }
-function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function(){ e.classList.remove('on'); }, 1800); }
-function ligaUrl(nome){
-  return jogo === 'Magic'
+function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(function(){ e.classList.remove('on'); }, 1400); }
+function ligaUrlJogo(nome, j){
+  return j === 'Magic'
     ? 'https://www.ligamagic.com.br/?view=cards/card&card=' + encodeURIComponent(nome)
     : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
 }
+function salvar(){ try { localStorage.setItem('balcao-carrinho', JSON.stringify(carrinho)); } catch (e) {} }
 try { var salvo = JSON.parse(localStorage.getItem('balcao-carrinho') || '[]'); if (Array.isArray(salvo)) carrinho = salvo; } catch (e) {}
 
-/* ===== câmbio do dia (AwesomeAPI, aberta) ===== */
 var cambio = {USD: 0, EUR: 0};
 function carregarCambio(){
   fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL').then(function(r){ return r.json(); }).then(function(j){
@@ -170,13 +192,14 @@ function emReais(valor, moeda){
   return (valor > 0 && tx > 0) ? valor * tx : 0;
 }
 
+
 /* ===== câmera ===== */
 function ligarCamera(){
   if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { semCamera('Este navegador não libera a câmera. Use o botão 📷 Foto.'); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { semCamera('Este navegador não libera a câmera. Use ⌨ Digitar ou 📷 Foto.'); return; }
   navigator.mediaDevices.getUserMedia({video: {facingMode: usarFrontal ? 'user' : {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 960}}, audio: false})
-    .then(function(s){ stream = s; $('video').srcObject = s; $('lido').textContent = 'Mire o nome da carta no retângulo.'; if (auto) loopAuto(); })
-    .catch(function(e){ semCamera('Câmera bloqueada (' + e.name + '). Permita a câmera no navegador ou use 📷 Foto.'); });
+    .then(function(s){ stream = s; $('video').srcObject = s; $('lido').textContent = 'Mire a carta.'; if (auto) loopAuto(); })
+    .catch(function(e){ semCamera('Câmera bloqueada (' + e.name + '). Permita a câmera no navegador ou use ⌨ Digitar / 📷 Foto.'); });
 }
 function semCamera(msg){
   var c = $('cam'); if (!c.querySelector('.semcam')) { var d = document.createElement('div'); d.className = 'semcam'; d.textContent = msg; c.appendChild(d); }
@@ -193,7 +216,7 @@ function getWorker(){
     return w.setParameters({tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'-,. ", tessedit_pageseg_mode: '6'}).then(function(){ status(''); return w; });
   });
 }
-var modo = 'nome';
+
 function recorteMira(){ return recorteDe($('cam').querySelector('.mira'), 900); }
 function recorteDe(el, alvoW){
   var v = $('video');
@@ -248,10 +271,9 @@ function interpretarRodape(t){
   if (toks.length) out.set = toks[toks.length - 1].toLowerCase();
   return out;
 }
-var ultimoRodape = '';
-var pausaAte = 0, ignorarNome = '', ignorarAte = 0;
+
 function lerQuadro(){
-  if (lendo || itemAtual || Date.now() < pausaAte) return Promise.resolve();
+  if (lendo || Date.now() < pausaAte || !$('scan').classList.contains('on')) return Promise.resolve();
   var cv = modo === 'inteira' ? recorteDe($('cam').querySelector('.z-nome'), 900) : recorteMira();
   if (!cv) return Promise.resolve();
   lendo = true;
@@ -263,20 +285,16 @@ function lerQuadro(){
     var linhas = (r.data.lines || []).map(function(l){ return {t: limparTexto(l.text), c: l.confidence || 0}; })
       .filter(function(l){ return l.t.length >= 3 && l.c >= 35; })
       .sort(function(a, b){ return b.c - a.c; }).slice(0, 3);
-    if (!linhas.length) { $('lido').textContent = 'Mire o nome da carta no retângulo…'; return; }
+    if (!linhas.length) { $('lido').textContent = 'Mire a carta…'; return; }
     var rodTxt = (rodapeAtual.set || rodapeAtual.num) ? ' · rodapé: ' + (rodapeAtual.set ? rodapeAtual.set.toUpperCase() + ' ' : '') + (rodapeAtual.num || '') + (rodapeAtual.total ? '/' + rodapeAtual.total : '') : '';
-    $('lido').innerHTML = 'Li: <b>' + esc(linhas[0].t) + '</b> (' + Math.round(linhas[0].c) + '%)' + esc(rodTxt);
+    $('lido').innerHTML = 'Li: <b>' + esc(linhas[0].t) + '</b>' + esc(rodTxt);
     return validarLinhas(linhas.map(function(l){ return l.t; }));
-  }).catch(function(e){ status('Erro no leitor: ' + (e && e.message ? e.message : e)); }).then(function(){ lendo = false; });
+  }).catch(function(e){ status('Leitor: ' + (e && e.message ? e.message : e)); }).then(function(){ lendo = false; });
 }
 function loopAuto(){
   if (!auto || !stream) return;
-  lerQuadro().then(function(){ setTimeout(loopAuto, 500); });
+  lerQuadro().then(function(){ setTimeout(loopAuto, 450); });
 }
-/* só troca as sugestões quando alguma linha lida bate com nome de carta de verdade */
-var cacheNomes = {};
-var ultimoHit = '';
-var rodapeAtual = {};
 function validarLinhas(linhas){
   var i = 0;
   return new Promise(function(res){
@@ -288,9 +306,8 @@ function validarLinhas(linhas){
         if (nomes.length && nomes[0] === ignorarNome && Date.now() < ignorarAte) { res(true); return; }
         if (nomes.length) {
           if (nomes[0] !== ultimoHit) {
-            ultimoHit = nomes[0]; $('nome').value = l; desenharSugestoes(nomes, l, true);
-            if (similaridade(l, nomes[0]) < 0.85) status('Leitura imperfeita ("' + l + '") — a sugestão mais parecida vem primeiro.');
-            else status('');
+            ultimoHit = nomes[0];
+            mostrarSugestoes(nomes.slice(0, 4), similaridade(l, nomes[0]) < 0.85 ? l : '');
             if (modo === 'inteira') tentarEdicaoExata(nomes[0], rodapeAtual);
           }
           res(true);
@@ -309,30 +326,16 @@ function lerFoto(file){
     var cv = document.createElement('canvas'); cv.width = W; cv.height = Math.round(img.naturalHeight * f);
     var ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, cv.width, cv.height); preparar(ctx, cv.width, cv.height);
     status('Lendo a foto…');
-    getWorker().then(function(w){ return w.setParameters({tessedit_pageseg_mode: '3'}).then(function(){ return w.recognize(cv); }); }).then(function(r){
-      worker.setParameters({tessedit_pageseg_mode: '6'});
-      var linhas = (r.data.text || '').split('\n').map(limparTexto).filter(function(l){ return l.length >= 3; });
+    getWorker().then(function(w){ return w.recognize(cv); }).then(function(r){
+      var linhas = (r.data.lines || []).map(function(l){ return limparTexto(l.text); }).filter(function(l){ return l.length >= 3; }).slice(0, 8);
       if (!linhas.length) { status('Não achei texto legível na foto.'); return; }
-      status('Testando ' + linhas.length + ' linhas da foto…');
-      testarLinhas(linhas.slice(0, 8));
+      ultimoHit = ''; return validarLinhas(linhas).then(function(ok){ status(ok ? '' : 'Nenhuma linha bateu com nome de carta.'); });
     }).catch(function(e){ status('Erro: ' + e.message); });
   };
   img.src = URL.createObjectURL(file);
 }
-function testarLinhas(linhas){
-  var i = 0;
-  (function prox(){
-    if (i >= linhas.length) { status('Nenhuma linha bateu com nome de carta. Digite o nome.'); return; }
-    var l = linhas[i++];
-    consultarNomes(l).then(function(nomes){
-      if (nomes.length) { $('nome').value = l; desenharSugestoes(nomes, l, true); status('Achei pela linha "' + l + '".'); }
-      else prox();
-    });
-  })();
-}
 
 /* ===== busca de nomes ===== */
-/* ---- busca tolerante a erro de leitura ---- */
 function similaridade(a, b){
   a = a.toLowerCase(); b = b.toLowerCase();
   if (a === b) return 1;
@@ -387,11 +390,9 @@ function fuzzyLocal(q){
       /* corte rápido: tamanho parecido ou alguma palavra em comum */
       if (Math.abs(n.length - nq.length) > 8 && !palavras.some(function(w){ return n.indexOf(w) >= 0; })) continue;
       var s = similaridade(nq, n);
-      if (s < 0.55) {
-        /* leitura parcial: compara com o começo do nome do mesmo tamanho */
-        var s2 = similaridade(nq, n.slice(0, nq.length));
-        if (s2 > s) s = s2 * 0.95;
-      }
+      /* leitura parcial: compara também com o começo do nome do mesmo tamanho */
+      var s2 = similaridade(nq, n.slice(0, nq.length)) * 0.95;
+      if (s2 > s) s = s2;
       if (s >= 0.55) out.push([s, cat[i][0]]);
     }
     out.sort(function(a, b){ return b[0] - a[0]; });
@@ -410,139 +411,148 @@ function consultarNomes(q){
   });
 }
 
-function buscarNomes(q, daCamera){
+
+function buscarDigitado(q){
   q = (q || '').trim();
-  if (q.length < 3) { $('sugestoes').innerHTML = ''; return; }
-  if (q === ultimaBusca && !daCamera) return;
-  ultimaBusca = q;
-  consultarNomes(q).then(function(nomes){ desenharSugestoes(nomes, q, daCamera); });
+  if (q.length < 3) { mostrarSugestoes([], ''); return; }
+  consultarNomes(q).then(function(nomes){ if ($('nome').value.trim() === q) mostrarSugestoes(nomes.slice(0, 6), q); });
 }
-function desenharSugestoes(nomes, q, daCamera){
+function mostrarSugestoes(nomes, lido){
+  sugAtuais = nomes;
+  exataAtual = null;
   var h = '';
-  nomes.forEach(function(n, i){ h += '<button class="' + (i === 0 && daCamera ? 'hit' : '') + '" data-nome="' + esc(n) + '">' + esc(n) + '</button>'; });
-  h += '<button data-nome="' + esc(q) + '">Usar "' + esc(q) + '" mesmo assim</button>';
-  $('sugestoes').innerHTML = h;
-  if (daCamera && nomes.length && navigator.vibrate) navigator.vibrate(40);
+  nomes.forEach(function(n, i){ h += '<button data-i="' + i + '" class="' + (i === 0 ? 'hit' : '') + '">' + esc(n) + '<small>' + (i === 0 ? 'toque pra adicionar' : '') + '</small></button>'; });
+  if (lido && nomes.length) h += '<button class="sec" data-livre="' + esc(lido) + '">li "' + esc(lido) + '" — usar assim mesmo</button>';
+  $('sug').innerHTML = h;
+  if (nomes.length && navigator.vibrate) navigator.vibrate(30);
 }
 
-/* ===== item ===== */
-/* com set+número do rodapé (Magic) ou número/total (Pokémon), tenta cravar a impressão */
+/* edição exata via rodapé (modo carta inteira) */
 function tentarEdicaoExata(nome, rod){
   if (!rod) return;
   if (jogo === 'Magic' && rod.set && rod.num) {
     fetch('https://api.scryfall.com/cards/' + encodeURIComponent(rod.set) + '/' + encodeURIComponent(rod.num)).then(function(r){ return r.ok ? r.json() : null; }).then(function(c){
-      if (!c || !c.name) return;
-      if (c.name.toLowerCase().indexOf(nome.toLowerCase().split(' ')[0]) < 0 && nome.toLowerCase().indexOf(c.name.toLowerCase().split(' ')[0]) < 0) return;
-      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-      escolherCartaMagic(c, true);
+      if (!c || !c.name || ultimoHit !== nome) return;
+      var a = c.name.toLowerCase().split(' ')[0], b = nome.toLowerCase().split(' ')[0];
+      if (c.name.toLowerCase().indexOf(b) < 0 && nome.toLowerCase().indexOf(a) < 0) return;
+      exataAtual = {tipo: 'magic', c: c};
+      var bt = $('sug').querySelector('button.hit'); if (bt) bt.innerHTML = esc(c.name) + '<small>' + esc((c.set || '').toUpperCase() + ' #' + c.collector_number + ' · rodapé lido ✓') + '</small>';
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
     }).catch(function(){});
   } else if (jogo === 'Pokémon' && rod.num) {
     fetch('https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome) + '&localId=' + encodeURIComponent(String(parseInt(rod.num, 10)))).then(function(r){ return r.ok ? r.json() : null; }).then(function(arr){
-      if (!Array.isArray(arr) || arr.length !== 1) return;
-      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-      escolherCartaPokemon(arr[0], true);
+      if (!Array.isArray(arr) || arr.length !== 1 || ultimoHit !== nome) return;
+      exataAtual = {tipo: 'pokemon', c: arr[0]};
+      var bt = $('sug').querySelector('button.hit'); if (bt) bt.innerHTML = esc(arr[0].name) + '<small>' + esc((arr[0].id || '').toUpperCase() + ' · rodapé lido ✓') + '</small>';
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
     }).catch(function(){});
   }
 }
-function escolherCartaMagic(c, exata){
-  itemAtual = {nome: c.name, img: '', ed: '', set: c.set, num: c.collector_number};
-  itemAtual.img = c.image_uris ? c.image_uris.normal : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.normal : '');
+
+/* ===== adicionar à lista ===== */
+function novoItem(nome){
+  return {id: Date.now() + '' + Math.random().toString(36).slice(2, 6), nome: nome, jogo: jogo, set: '', num: '', img: '', ed: '', preco: 0, qtd: 1, ref: 0, refTxt: ''};
+}
+function adicionarNome(nome, exata){
+  var it = novoItem(nome);
+  if (exata && exata.tipo === 'magic') aplicarMagic(it, exata.c, true);
+  else if (exata && exata.tipo === 'pokemon') aplicarPokemon(it, exata.c, true);
+  carrinho.push(it); salvar(); atualizarContador();
+  if (!exata) enriquecer(it);
+  ignorarNome = nome; ignorarAte = Date.now() + 6000; pausaAte = Date.now() + 1200;
+  ultimoHit = ''; sugAtuais = []; exataAtual = null; $('sug').innerHTML = ''; $('nome').value = '';
+  toast('✓ ' + nome + ' (' + carrinho.length + ')');
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+function aplicarMagic(it, c, exata){
+  it.nome = c.name; it.set = c.set || ''; it.num = c.collector_number || '';
+  it.img = c.image_uris ? c.image_uris.small : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.small : '');
   var usd = c.prices ? parseFloat(c.prices.usd || c.prices.usd_foil || 0) : 0;
   var eur = c.prices ? parseFloat(c.prices.eur || c.prices.eur_foil || 0) : 0;
-  var ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
-  var refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
-  itemAtual.ed = (c.set_name || '') + ' · #' + (c.collector_number || '') + (exata ? ' · lida do rodapé' : '');
-  guardarItem(); desenharItem();
-  if (ref) aplicarRef(ref, refTxt);
-  marcarEdicaoAtiva();
+  it.ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
+  it.refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
+  it.ed = (c.set_name || '') + ' · #' + it.num + (exata ? ' · rodapé' : '');
 }
-function escolherCartaPokemon(c, exata){
-  itemAtual = {nome: c.name, img: c.image ? c.image + '/high.webp' : '', ed: (c.id || '').toUpperCase() + (exata ? ' · lida do rodapé' : ''), set: c.id ? c.id.slice(0, c.id.lastIndexOf('-')) : '', num: c.localId || ''};
-  guardarItem(); desenharItem(); marcarEdicaoAtiva();
+function aplicarPokemon(it, c, exata){
+  it.nome = c.name; it.set = c.id ? c.id.slice(0, c.id.lastIndexOf('-')) : ''; it.num = c.localId || '';
+  it.img = c.image ? c.image + '/low.webp' : '';
+  it.ed = (c.id || '').toUpperCase() + (exata ? ' · rodapé' : '');
   fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(c.id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
-    if (!d || !itemAtual || itemAtual.num !== (c.localId || '')) return;
-    if (d.set && d.set.name && $('edItem')) { itemAtual.ed = d.set.name + ' · #' + (c.localId || '') + (exata ? ' · lida do rodapé' : ''); $('edItem').textContent = itemAtual.ed; }
+    if (!d) return;
+    if (d.set && d.set.name) it.ed = d.set.name + ' · #' + it.num + (exata ? ' · rodapé' : '');
     if (d.pricing) {
-      var cm = d.pricing.cardmarket, tp = d.pricing.tcgplayer, v = 0, t = '';
-      if (cm && (cm.trend || cm.avg)) { v = emReais(cm.trend || cm.avg, 'EUR'); t = '€ ' + (cm.trend || cm.avg).toFixed(2); }
-      else if (tp) { var k = Object.keys(tp)[0]; var m = k && tp[k] ? (tp[k].marketPrice || tp[k].midPrice) : 0; if (m) { v = emReais(m, 'USD'); t = 'US$ ' + m.toFixed(2); } }
-      if (v) aplicarRef(v, t);
+      var cm = d.pricing.cardmarket, tp = d.pricing.tcgplayer;
+      if (cm && (cm.trend || cm.avg)) { it.ref = emReais(cm.trend || cm.avg, 'EUR'); it.refTxt = '€ ' + (cm.trend || cm.avg).toFixed(2); }
+      else if (tp) { var k = Object.keys(tp)[0]; var m = k && tp[k] ? (tp[k].marketPrice || tp[k].midPrice) : 0; if (m) { it.ref = emReais(m, 'USD'); it.refTxt = 'US$ ' + m.toFixed(2); } }
     }
+    salvar(); if ($('lista').classList.contains('on')) desenharLista();
   }).catch(function(){});
 }
-var edicoesCache = [];
-function listarEdicoes(nome){
-  $('edicoes').innerHTML = '<span class="status">buscando edições…</span>';
-  var url = jogo === 'Magic'
-    ? 'https://api.scryfall.com/cards/search?order=released&unique=prints&q=' + encodeURIComponent('!"' + nome + '"')
-    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
+function enriquecer(it){
+  var url = it.jogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(it.nome)
+    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(it.nome);
   fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
-    if (!itemAtual || itemAtual.nome !== nome) return;
-    var lista = jogo === 'Magic' ? (j && j.data ? j.data : []) : (Array.isArray(j) ? j : []);
-    edicoesCache = lista;
-    if (lista.length <= 1) { $('edicoes').innerHTML = ''; return; }
-    var h = '<span class="tit">edições</span>';
-    lista.slice(0, 40).forEach(function(c, i){
-      var img = jogo === 'Magic' ? (c.image_uris ? c.image_uris.small : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.small : '')) : (c.image ? c.image + '/low.webp' : '');
-      var rot = jogo === 'Magic' ? (c.set || '').toUpperCase() + ' #' + c.collector_number : (c.id || '').toUpperCase();
-      var sub = jogo === 'Magic' ? (c.set_name || '') : '';
-      h += '<button data-i="' + i + '" title="' + esc(sub) + '"><img loading="lazy" src="' + esc(img) + '" alt="">' + esc(rot) + '</button>';
+    if (!j) return;
+    if (it.jogo === 'Magic') aplicarMagic(it, j, false);
+    else if (Array.isArray(j) && j.length) { aplicarPokemon(it, j[0], false); if (j.length > 1) it.ed += ' · ' + j.length + ' edições'; }
+    salvar(); if ($('lista').classList.contains('on')) desenharLista();
+  }).catch(function(){});
+}
+function atualizarContador(){ $('contador').textContent = carrinho.length; }
+
+/* ===== LISTA ===== */
+var aberto = null, edicoesCache = {};
+function desenharLista(){
+  if (!carrinho.length) { $('itens').innerHTML = '<div class="vazio">Nada escaneado ainda.<br>Volta pro Scanner e vai passando as cartas.</div>'; }
+  else {
+    var h = '';
+    carrinho.forEach(function(it){
+      var tem = it.preco > 0;
+      h += '<div class="it ' + (tem ? 'ok' : '') + (aberto === it.id ? ' aberto' : '') + '" data-id="' + it.id + '">' +
+        '<div class="cab"><img src="' + esc(it.img) + '" alt=""><div class="nm"><b>' + esc(it.nome) + '</b><small>' + esc(it.ed || it.jogo) + '</small></div>' +
+        '<span class="vl ' + (tem ? '' : 'sem') + '">' + (tem ? dinheiro(it.preco * it.qtd) + (it.qtd > 1 ? ' <small>×' + it.qtd + '</small>' : '') : 'sem preço') + '</span></div>' +
+        '<div class="corpo">' +
+          '<div class="ed">' + esc(it.ed || '') + '</div>' +
+          '<a class="liga ' + (it.jogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrlJogo(it.nome, it.jogo)) + '" data-liga="1">Ver preço na ' + (it.jogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + '</a>' +
+          '<div class="preco"><span>R$</span><input class="pr" inputmode="numeric" placeholder="0,00" value="' + (tem ? it.preco.toFixed(2).replace('.', ',') : '') + '" autocomplete="off"><span>×</span><input class="qtd" inputmode="numeric" value="' + it.qtd + '"><button class="colar">Colar</button><button class="rm">remover</button></div>' +
+          '<div class="ref">' + (it.ref ? 'referência internacional: ' + dinheiro(it.ref) + ' (' + esc(it.refTxt) + ' × câmbio)' : '') + '</div>' +
+          '<div class="edicoes" data-id="' + it.id + '"></div>' +
+        '</div></div>';
     });
-    $('edicoes').innerHTML = h;
-    marcarEdicaoAtiva();
-  }).catch(function(){ $('edicoes').innerHTML = ''; });
-}
-function marcarEdicaoAtiva(){
-  var bs = document.querySelectorAll('#edicoes button');
-  for (var i = 0; i < bs.length; i++) {
-    var c = edicoesCache[Number(bs[i].getAttribute('data-i'))];
-    var ativo = itemAtual && c && (jogo === 'Magic' ? (c.set === itemAtual.set && c.collector_number === itemAtual.num) : (c.id && itemAtual.set + '-' + itemAtual.num === c.id));
-    bs[i].classList.toggle('on', !!ativo);
+    $('itens').innerHTML = h;
+    if (aberto) carregarEdicoes(aberto);
   }
+  var tot = 0, sem = 0;
+  carrinho.forEach(function(it){ tot += it.preco * it.qtd; if (!(it.preco > 0)) sem++; });
+  $('total').textContent = dinheiro(tot);
+  $('pend').textContent = carrinho.length ? (sem ? sem + ' carta(s) sem preço' : 'todas com preço') : '';
 }
-function escolherNome(nome){
-  itemAtual = {nome: nome, img: '', ed: ''};
-  guardarItem();
-  desenharItem();
-  listarEdicoes(nome);
-  var url = jogo === 'Magic'
-    ? 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(nome)
-    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
+function itemPorId(id){ for (var i = 0; i < carrinho.length; i++) if (carrinho[i].id === id) return carrinho[i]; return null; }
+function carregarEdicoes(id){
+  var it = itemPorId(id), box = document.querySelector('.edicoes[data-id="' + id + '"]'); if (!it || !box) return;
+  function render(lista){
+    if (lista.length <= 1) { box.innerHTML = ''; return; }
+    var h = '';
+    lista.slice(0, 40).forEach(function(c, i){
+      var img = it.jogo === 'Magic' ? (c.image_uris ? c.image_uris.small : (c.card_faces && c.card_faces[0].image_uris ? c.card_faces[0].image_uris.small : '')) : (c.image ? c.image + '/low.webp' : '');
+      var rot = it.jogo === 'Magic' ? (c.set || '').toUpperCase() + ' #' + c.collector_number : (c.id || '').toUpperCase();
+      var on = it.jogo === 'Magic' ? (c.set === it.set && c.collector_number === it.num) : (c.id === it.set + '-' + it.num);
+      h += '<button data-i="' + i + '" class="' + (on ? 'on' : '') + '" title="' + esc(c.set_name || '') + '"><img loading="lazy" src="' + esc(img) + '" alt="">' + esc(rot) + '</button>';
+    });
+    box.innerHTML = h;
+  }
+  var chave = it.jogo + '|' + it.nome;
+  if (edicoesCache[chave]) { render(edicoesCache[chave]); return; }
+  box.innerHTML = '<span class="ref">buscando edições…</span>';
+  var url = it.jogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/search?order=released&unique=prints&q=' + encodeURIComponent('!"' + it.nome + '"')
+    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(it.nome);
   fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
-    if (!itemAtual || itemAtual.nome !== nome || !j) return;
-    var ref = 0, refTxt = '';
-    if (jogo === 'Magic') {
-      itemAtual.img = j.image_uris ? j.image_uris.normal : (j.card_faces && j.card_faces[0].image_uris ? j.card_faces[0].image_uris.normal : '');
-      var usd = j.prices ? parseFloat(j.prices.usd || j.prices.usd_foil || 0) : 0;
-      var eur = j.prices ? parseFloat(j.prices.eur || j.prices.eur_foil || 0) : 0;
-      ref = emReais(usd, 'USD') || emReais(eur, 'EUR');
-      refTxt = usd ? 'US$ ' + usd.toFixed(2) : (eur ? '€ ' + eur.toFixed(2) : '');
-      itemAtual.set = j.set; itemAtual.num = j.collector_number;
-      itemAtual.ed = (j.set_name || '') + ' · #' + (j.collector_number || '') + (refTxt ? ' · mercado intl. ' + refTxt : '');
-    } else {
-      var c = Array.isArray(j) ? j[0] : null;
-      if (c && c.image) itemAtual.img = c.image + '/high.webp';
-      if (c && c.id) { itemAtual.set = c.id.slice(0, c.id.lastIndexOf('-')); itemAtual.num = c.localId || ''; }
-      itemAtual.ed = Array.isArray(j) ? j.length + ' edições — toque na certa abaixo' : '';
-      if (c && c.id) {
-        fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(c.id)).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
-          if (!d || !d.pricing || !itemAtual || itemAtual.nome !== nome) return;
-          var cm = d.pricing.cardmarket, tp = d.pricing.tcgplayer;
-          var v = 0, t = '';
-          if (cm && (cm.trend || cm.avg)) { v = emReais(cm.trend || cm.avg, 'EUR'); t = '€ ' + (cm.trend || cm.avg).toFixed(2); }
-          else if (tp) { var k = Object.keys(tp)[0]; var m = k && tp[k] ? (tp[k].marketPrice || tp[k].midPrice) : 0; if (m) { v = emReais(m, 'USD'); t = 'US$ ' + m.toFixed(2); } }
-          if (v) aplicarRef(v, t);
-        }).catch(function(){});
-      }
-    }
-    if ($('imgItem')) { if (itemAtual.img) { $('imgItem').src = itemAtual.img; $('imgItem').style.visibility = 'visible'; } $('edItem').textContent = itemAtual.ed; }
-    if (ref) aplicarRef(ref, refTxt);
-  }).catch(function(){});
+    var lista = it.jogo === 'Magic' ? (j && j.data ? j.data : []) : (Array.isArray(j) ? j : []);
+    edicoesCache[chave] = lista; render(lista);
+  }).catch(function(){ box.innerHTML = ''; });
 }
-function aplicarRef(v, txt){
-  var r = $('refItem'); if (r) r.textContent = 'referência internacional: ' + dinheiro(v) + (txt ? ' (' + txt + ' × câmbio)' : '') + ' — digite o preço da Liga';
-}
-/* máscara de dinheiro estilo maquininha: só digitos, centavos entram pela direita (1250 → 12,50) */
 function mascaraDinheiro(inp){
   var d = String(inp.value || '').replace(/\D/g, '').replace(/^0+/, '');
   if (!d) { inp.value = ''; return; }
@@ -550,118 +560,109 @@ function mascaraDinheiro(inp){
   while (d.length < 3) d = '0' + d;
   inp.value = d.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d.slice(-2);
 }
-function colarPreco(){
-  if (!navigator.clipboard || !navigator.clipboard.readText) { toast('Seu navegador não deixa colar automático'); return; }
-  navigator.clipboard.readText().then(function(t){
-    var m = String(t).match(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+(?:[\.,][0-9]{1,2})?)/);
-    if (!m) { toast('Não achei número no que foi copiado'); return; }
-    var v = lerPreco(m[1].replace(/\./g, '').replace(',', '.'));
-    if (m[1].indexOf(',') < 0 && m[1].indexOf('.') >= 0) v = parseFloat(m[1]);
-    $('precoItem').value = v.toFixed(2).replace('.', ',');
-    toast('Preço colado: ' + dinheiro(v));
-  }).catch(function(){ toast('Permissão de colar negada'); });
-}
-function abrirSheet(url, tit){
-  $('sheetTit').textContent = tit; $('sheetFora').href = url; $('sheetFrame').src = url; $('sheet').hidden = false;
-}
-function fecharSheet(){ $('sheet').hidden = true; $('sheetFrame').src = 'about:blank'; }
-function desenharItem(){
-  if (!itemAtual) { $('item').innerHTML = ''; if (auto && stream && !lendo) loopAuto(); return; }
-  $('item').innerHTML = '<div class="item">' +
-    '<img id="imgItem" src="' + esc(itemAtual.img) + '" alt="" style="' + (itemAtual.img ? '' : 'visibility:hidden') + '">' +
-    '<div class="campos"><b>' + esc(itemAtual.nome) + '</b><span class="ed" id="edItem">' + esc(itemAtual.ed) + '</span>' +
-    '<a class="liga ' + (jogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrl(itemAtual.nome)) + '" id="ligaBtn">Ver preço na ' + (jogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + '</a>' +
-    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="numeric" placeholder="0,00" autocomplete="off"><button class="colar" id="colarItem" title="colar valor copiado da Liga">Colar</button><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
-    '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div>' +
-    '<span class="ed" id="refItem"></span></div></div>';
-  $('item').scrollIntoView({behavior: 'smooth', block: 'center'});
-}
-function guardarItem(){ try { if (itemAtual) sessionStorage.setItem('balcao-item', JSON.stringify({j: jogo, it: itemAtual})); else sessionStorage.removeItem('balcao-item'); } catch (e) {} }
-function adicionar(){
-  if (!itemAtual) return;
-  var p = lerPreco($('precoItem').value), q = parseInt($('qtdItem').value, 10) || 1;
-  carrinho.push({nome: itemAtual.nome, jogo: jogo, preco: p, qtd: q, ed: (itemAtual.set ? itemAtual.set.toUpperCase() + (itemAtual.num ? ' #' + itemAtual.num : '') : '')});
-  $('edicoes').innerHTML = '';
-  ignorarNome = itemAtual.nome; ignorarAte = Date.now() + 6000; pausaAte = Date.now() + 1500;
-  itemAtual = null; ultimoTexto = ''; ultimaBusca = ''; ultimoHit = ''; guardarItem();
-  $('sugestoes').innerHTML = ''; $('nome').value = ''; status('Próxima carta…');
-  salvar(); desenharCarrinho(); desenharItem(); toast('Adicionado');
-  window.scrollTo({top: 0, behavior: 'smooth'});
-}
-function salvar(){ try { localStorage.setItem('balcao-carrinho', JSON.stringify(carrinho)); } catch (e) {} }
-function desenharCarrinho(){
-  var h = '', tot = 0;
-  carrinho.forEach(function(it, i){
-    var sub = it.preco * it.qtd; tot += sub;
-    h += '<div class="it"><span class="nm">' + esc(it.nome) + (it.ed ? ' <small style="color:var(--txt2)">' + esc(it.ed) + '</small>' : '') + (it.qtd > 1 ? ' ×' + it.qtd : '') + '</span><span class="vl">' + dinheiro(sub) + '</span><button class="rm" data-i="' + i + '">✕</button></div>';
-  });
-  $('itens').innerHTML = h || '<div class="status">Nada ainda.</div>';
+function atualizarResumo(){
+  var tot = 0, sem = 0;
+  carrinho.forEach(function(it){ tot += it.preco * it.qtd; if (!(it.preco > 0)) sem++; });
   $('total').textContent = dinheiro(tot);
-}
-function ligaUrlJogo(nome, j){
-  return j === 'Magic'
-    ? 'https://www.ligamagic.com.br/?view=cards/card&card=' + encodeURIComponent(nome)
-    : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
+  $('pend').textContent = carrinho.length ? (sem ? sem + ' carta(s) sem preço' : 'todas com preço') : '';
+  carrinho.forEach(function(it){
+    var el = document.querySelector('.it[data-id="' + it.id + '"]'); if (!el) return;
+    el.classList.toggle('ok', it.preco > 0);
+    var vl = el.querySelector('.vl'); vl.className = 'vl ' + (it.preco > 0 ? '' : 'sem'); vl.innerHTML = it.preco > 0 ? dinheiro(it.preco * it.qtd) + (it.qtd > 1 ? ' <small>×' + it.qtd + '</small>' : '') : 'sem preço';
+  });
 }
 function textoLista(){
   var tot = 0, d = new Date();
   var linhas = ['*Lista de cartas* — ' + d.toLocaleDateString('pt-BR') + ' ' + d.toTimeString().slice(0, 5), ''];
   carrinho.forEach(function(it, i){
     var s = it.preco * it.qtd; tot += s;
-    linhas.push((i + 1) + '. *' + it.nome + '*' + (it.ed ? ' (' + it.ed + ')' : '') + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s));
+    var ed = it.set ? ' (' + it.set.toUpperCase() + (it.num ? ' #' + it.num : '') + ')' : '';
+    linhas.push((i + 1) + '. *' + it.nome + '*' + ed + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + (it.preco > 0 ? dinheiro(s) : 'sem preço'));
     linhas.push('   ' + ligaUrlJogo(it.nome, it.jogo));
   });
   linhas.push('', '*TOTAL: ' + dinheiro(tot) + '*', '', '(valores anotados no balcão; links para conferência na Liga)');
   return linhas.join('\n');
 }
+function fallbackCopiar(txt){ var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Lista copiada'); } catch (e) {} ta.remove(); }
 function copiar(){
   if (!carrinho.length) { toast('Lista vazia'); return; }
   var txt = textoLista();
-  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ toast('Lista copiada — cola no WhatsApp'); }, function(){ fallbackCopiar(txt); });
-  else fallbackCopiar(txt);
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ toast('Lista copiada'); }, function(){ fallbackCopiar(txt); }); else fallbackCopiar(txt);
 }
-function whatsapp(){
-  if (!carrinho.length) { toast('Lista vazia'); return; }
-  window.open('https://wa.me/?text=' + encodeURIComponent(textoLista()), '_blank');
+function whatsapp(){ if (!carrinho.length) { toast('Lista vazia'); return; } window.open('https://wa.me/?text=' + encodeURIComponent(textoLista()), '_blank'); }
+function colarPreco(inp, it){
+  if (!navigator.clipboard || !navigator.clipboard.readText) { toast('Navegador não deixa colar automático'); return; }
+  navigator.clipboard.readText().then(function(t){
+    var m = String(t).match(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+(?:[\.,][0-9]{1,2})?)/);
+    if (!m) { toast('Não achei número no que foi copiado'); return; }
+    var v = m[1].indexOf(',') >= 0 ? lerPreco(m[1]) : parseFloat(m[1].replace(',', '.'));
+    inp.value = v.toFixed(2).replace('.', ','); it.preco = v; salvar(); atualizarResumo(); toast('Preço colado: ' + dinheiro(v));
+  }).catch(function(){ toast('Permissão de colar negada'); });
 }
-function fallbackCopiar(txt){ var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Lista copiada'); } catch (e) {} ta.remove(); }
+function abrirSheet(url, tit){ $('sheetTit').textContent = tit; $('sheetFora').href = url; $('sheetFrame').src = url; $('sheet').hidden = false; }
+function fecharSheet(){ $('sheet').hidden = true; $('sheetFrame').src = 'about:blank'; }
+
+/* ===== navegação ===== */
+function irPara(tela){
+  $('scan').classList.toggle('on', tela === 'scan'); $('lista').classList.toggle('on', tela === 'lista');
+  if (tela === 'lista') { desenharLista(); window.scrollTo(0, 0); if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } }
+  else { if (!stream) ligarCamera(); }
+}
 
 /* ===== eventos ===== */
 document.addEventListener('click', function(ev){
-  var js = ev.target.closest('#jogoSel button');
-  if (js) { jogo = js.getAttribute('data-j'); document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b === js); }); itemAtual = null; ultimaBusca = ''; desenharItem(); buscarNomes($('nome').value); return; }
-  var sg = ev.target.closest('#sugestoes button');
-  if (sg) { escolherNome(sg.getAttribute('data-nome')); return; }
-  var lb = ev.target.closest('#ligaBtn');
-  if (lb) { ev.preventDefault(); abrirSheet(lb.getAttribute('href'), itemAtual ? itemAtual.nome : 'Liga'); return; }
-  if (ev.target.closest('#sheetFechar')) { fecharSheet(); return; }
-  if (ev.target.closest('#btModo')) { modo = modo === 'nome' ? 'inteira' : 'nome'; $('cam').classList.toggle('inteira', modo === 'inteira'); $('btModo').textContent = 'Modo: ' + (modo === 'inteira' ? 'carta inteira' : 'nome'); $('btCaixa').style.display = modo === 'inteira' ? 'none' : ''; ultimoHit = ''; return; }
-  var ed = ev.target.closest('#edicoes button');
-  if (ed) { var cc = edicoesCache[Number(ed.getAttribute('data-i'))]; if (cc) { if (jogo === 'Magic') escolherCartaMagic(cc, false); else escolherCartaPokemon(cc, false); } return; }
-  if (ev.target.closest('#btCaixa')) { var c = $('cam'); c.classList.toggle('pequena'); $('btCaixa').textContent = 'Caixa: ' + (c.classList.contains('pequena') ? 'pequena' : 'grande'); return; }
-  if (ev.target.closest('#addItem')) { adicionar(); return; }
-  if (ev.target.closest('#colarItem')) { colarPreco(); return; }
-  if (ev.target.closest('#cancItem')) { itemAtual = null; ultimoTexto = ''; ultimoHit = ''; guardarItem(); desenharItem(); $('edicoes').innerHTML = ''; return; }
-  var rm = ev.target.closest('.carrinho .rm');
-  if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); salvar(); desenharCarrinho(); return; }
-  if (ev.target.closest('#copiar')) { copiar(); return; }
-  if (ev.target.closest('#whats')) { whatsapp(); return; }
-  if (ev.target.closest('#limpar')) { carrinho = []; salvar(); desenharCarrinho(); toast('Lista limpa'); return; }
-  if (ev.target.closest('#btLer')) { ultimoTexto = ''; lerQuadro(); return; }
-  if (ev.target.closest('#btAuto')) { auto = !auto; $('btAuto').textContent = 'Auto: ' + (auto ? 'ligado' : 'desligado'); if (auto) loopAuto(); return; }
-  if (ev.target.closest('#btTrocar')) { usarFrontal = !usarFrontal; ligarCamera(); return; }
+  var t = ev.target;
+  var js = t.closest('#jogoSel button');
+  if (js) { jogo = js.getAttribute('data-j'); document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b === js); }); ultimoHit = ''; $('sug').innerHTML = ''; return; }
+  var sb = t.closest('#sug button');
+  if (sb) {
+    if (sb.hasAttribute('data-livre')) { adicionarNome(sb.getAttribute('data-livre'), null); return; }
+    var i = Number(sb.getAttribute('data-i')); var nome = sugAtuais[i];
+    if (nome) adicionarNome(nome, i === 0 ? exataAtual : null);
+    return;
+  }
+  if (t.closest('#irLista')) { irPara('lista'); return; }
+  if (t.closest('#irScan')) { irPara('scan'); return; }
+  if (t.closest('#btDigitar')) { $('digitar').classList.add('on'); setTimeout(function(){ $('nome').focus(); }, 50); return; }
+  if (t.closest('#fecharDigitar')) { $('digitar').classList.remove('on'); $('nome').value = ''; $('sug').innerHTML = ''; return; }
+  if (t.closest('#btLer')) { ultimoHit = ''; pausaAte = 0; lerQuadro(); return; }
+  if (t.closest('#btAuto')) { auto = !auto; $('btAuto').textContent = 'Auto: ' + (auto ? 'ligado' : 'desligado'); if (auto) loopAuto(); return; }
+  if (t.closest('#btModo')) { modo = modo === 'nome' ? 'inteira' : 'nome'; $('cam').classList.toggle('inteira', modo === 'inteira'); $('btModo').textContent = 'Modo: ' + (modo === 'inteira' ? 'carta inteira' : 'nome'); ultimoHit = ''; return; }
+  if (t.closest('#btTrocar')) { usarFrontal = !usarFrontal; ligarCamera(); return; }
+  /* lista */
+  var cab = t.closest('.it .cab');
+  if (cab) { var id = cab.parentElement.getAttribute('data-id'); aberto = aberto === id ? null : id; desenharLista(); if (aberto) { var inp = document.querySelector('.it.aberto .pr'); if (inp && !inp.value) setTimeout(function(){ inp.focus(); }, 80); } return; }
+  var lg = t.closest('a[data-liga]');
+  if (lg) { ev.preventDefault(); var it0 = itemPorId(lg.closest('.it').getAttribute('data-id')); abrirSheet(lg.getAttribute('href'), it0 ? it0.nome : 'Liga'); return; }
+  if (t.closest('#sheetFechar')) { fecharSheet(); return; }
+  var rm = t.closest('.it .rm');
+  if (rm) { var idr = rm.closest('.it').getAttribute('data-id'); carrinho = carrinho.filter(function(x){ return x.id !== idr; }); salvar(); atualizarContador(); aberto = null; desenharLista(); return; }
+  var cl = t.closest('.it .colar');
+  if (cl) { var itc = itemPorId(cl.closest('.it').getAttribute('data-id')); colarPreco(cl.closest('.it').querySelector('.pr'), itc); return; }
+  var edb = t.closest('.edicoes button');
+  if (edb) {
+    var ite = itemPorId(edb.closest('.it').getAttribute('data-id')); var lista = edicoesCache[ite.jogo + '|' + ite.nome] || []; var c = lista[Number(edb.getAttribute('data-i'))];
+    if (c) { if (ite.jogo === 'Magic') aplicarMagic(ite, c, false); else aplicarPokemon(ite, c, false); salvar(); desenharLista(); }
+    return;
+  }
+  if (t.closest('#copiar')) { copiar(); return; }
+  if (t.closest('#whats')) { whatsapp(); return; }
+  if (t.closest('#limpar')) { if (carrinho.length && !confirm('Apagar a lista inteira?')) return; carrinho = []; salvar(); atualizarContador(); desenharLista(); return; }
+});
+document.addEventListener('input', function(ev){
+  var t = ev.target;
+  if (t.classList.contains('pr')) { mascaraDinheiro(t); var it = itemPorId(t.closest('.it').getAttribute('data-id')); if (it) { it.preco = lerPreco(t.value); salvar(); atualizarResumo(); } }
+  if (t.classList.contains('qtd')) { var it2 = itemPorId(t.closest('.it').getAttribute('data-id')); if (it2) { it2.qtd = parseInt(t.value, 10) || 1; salvar(); atualizarResumo(); } }
+  if (t.id === 'nome') { clearTimeout(buscaTimer); var v = t.value; buscaTimer = setTimeout(function(){ buscarDigitado(v); }, 300); }
+});
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Enter' && ev.target.id === 'nome') { if (sugAtuais[0]) adicionarNome(sugAtuais[0], null); }
+  if (ev.key === 'Enter' && ev.target.classList && ev.target.classList.contains('pr')) { ev.target.blur(); aberto = null; desenharLista(); }
 });
 $('foto').addEventListener('change', function(){ lerFoto(this.files && this.files[0]); this.value = ''; });
-$('nome').addEventListener('input', function(){ clearTimeout(buscaTimer); var v = this.value; buscaTimer = setTimeout(function(){ buscarNomes(v); }, 350); });
-document.addEventListener('input', function(ev){ if (ev.target && ev.target.id === 'precoItem') mascaraDinheiro(ev.target); });
-document.addEventListener('keydown', function(ev){
-  if (ev.key === 'Enter' && ev.target.id === 'precoItem') adicionar();
-  if (ev.key === 'Enter' && ev.target.id === 'nome') { var b = document.querySelector('#sugestoes button'); if (b) escolherNome(b.getAttribute('data-nome')); }
-});
-document.addEventListener('visibilitychange', function(){ if (document.hidden) { if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } } else if (!stream) ligarCamera(); });
+document.addEventListener('visibilitychange', function(){ if (document.hidden) { if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } } else if (!stream && $('scan').classList.contains('on')) ligarCamera(); });
 
-desenharCarrinho();
-try { var gi = JSON.parse(sessionStorage.getItem('balcao-item') || 'null'); if (gi && gi.it) { jogo = gi.j; document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-j') === jogo); }); escolherNome(gi.it.nome); } } catch (e) {}
+atualizarContador();
 ligarCamera();
 </script>
 </body>
