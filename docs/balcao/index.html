@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0a09">
+<title>Balcão — Grimório</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+:root{--bg:#0c0a09;--bg2:#17120f;--card:#1f1915;--borda:#3a2e26;--txt:#f1e6d6;--txt2:#a89a88;--ac:#ff8a2a;--ac2:#ffc247;--ok:#4cd17a;--azul:#1e5bd8;--verm:#d62828}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font:inherit;cursor:pointer}
+header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0;flex:1;font-family:Georgia,serif;letter-spacing:3px;text-transform:uppercase}
+.jogo-sel{display:flex;border:1px solid var(--borda);border-radius:20px;overflow:hidden}
+.jogo-sel button{background:var(--card);border:0;color:var(--txt2);padding:6px 12px;font-size:13px}
+.jogo-sel button.on{background:var(--ac);color:#000;font-weight:600}
+main{max-width:720px;margin:0 auto;padding:12px 12px 40px}
+
+/* câmera */
+.cam{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--borda)}
+.cam video{width:100%;height:100%;object-fit:cover;display:block}
+.cam .mira{position:absolute;left:8%;right:8%;top:34%;height:16%;border:2px solid var(--ac2);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
+.cam .mira::after{content:"encaixe o NOME da carta aqui";position:absolute;left:0;right:0;top:-24px;text-align:center;color:var(--ac2);font-size:12px;letter-spacing:1px;text-shadow:0 0 6px #000}
+.cam .lido{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85));font-size:13px;color:#fff;min-height:34px}
+.cam .lido b{color:var(--ac2)}
+.cam .semcam{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--txt2)}
+.ctrl{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.ctrl button{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:8px 14px}
+.ctrl button.pri{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
+.ctrl label{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:8px 14px;cursor:pointer}
+.ctrl label input{display:none}
+input.nome{width:100%;background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:10px 14px;font-size:16px;margin-bottom:8px}
+.status{color:var(--txt2);font-size:13px;min-height:18px;margin-bottom:8px}
+.sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.sugestoes button{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:16px;padding:7px 12px;font-size:14px}
+.sugestoes button.hit{border-color:var(--ac2);background:#2a2012}
+
+/* item */
+.item{background:var(--card);border:1px solid var(--ac);border-radius:14px;padding:12px;margin-bottom:14px;display:flex;gap:12px;align-items:flex-start}
+.item img{width:96px;border-radius:6px;background:#000}
+.item .campos{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.item .campos b{font-size:16px}
+.item .campos .ed{color:var(--txt2);font-size:12px}
+.item a.liga{display:block;background:var(--azul);color:#fff;text-decoration:none;border-radius:8px;padding:10px 12px;font-weight:600;text-align:center}
+.item a.liga.pk{background:var(--verm)}
+.item .preco{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.item .preco input{width:110px;background:var(--bg);border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:17px}
+.item .preco input.qtd{width:58px}
+.item .add{background:var(--ok);color:#000;font-weight:700;border:0;border-radius:8px;padding:10px 14px}
+.item .canc{background:transparent;border:1px solid var(--borda);color:var(--txt2);border-radius:8px;padding:10px 12px}
+
+/* carrinho */
+.carrinho{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px}
+.carrinho h3{margin:0 0 8px;font-size:13px;color:var(--txt2);text-transform:uppercase;letter-spacing:1px}
+.carrinho .it{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--borda);font-size:14px}
+.carrinho .it:last-child{border-bottom:0}
+.carrinho .it .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.carrinho .it .vl{color:var(--ac2);font-weight:600}
+.carrinho .it .rm{background:transparent;border:0;color:var(--txt2);font-size:18px;padding:0 6px}
+.carrinho .tot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:18px}
+.carrinho .tot b{color:var(--ac2);font-size:24px}
+.carrinho .acoes{display:flex;gap:8px;margin-top:10px}
+.carrinho .acoes button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:8px 12px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#000;color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+.toast.on{opacity:.95}
+</style>
+</head>
+<body>
+<header>
+  <h1>Balcão</h1>
+  <div class="jogo-sel" id="jogoSel"><button data-j="Magic" class="on">Magic</button><button data-j="Pokémon">Pokémon</button></div>
+</header>
+<main>
+  <div class="cam" id="cam">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="mira"></div>
+    <div class="lido" id="lido">Ligando a câmera…</div>
+  </div>
+  <div class="ctrl">
+    <button class="pri" id="btLer">Ler agora</button>
+    <button id="btAuto">Auto: ligado</button>
+    <button id="btTrocar">Trocar câmera</button>
+    <label>📷 Foto<input type="file" id="foto" accept="image/*" capture="environment"></label>
+  </div>
+  <input class="nome" id="nome" placeholder="ou digite o nome da carta">
+  <div class="status" id="status"></div>
+  <div class="sugestoes" id="sugestoes"></div>
+  <div id="item"></div>
+  <div class="carrinho">
+    <h3>Levando</h3>
+    <div id="itens"><div class="status">Nada ainda.</div></div>
+    <div class="tot"><span>Total</span><b id="total">R$ 0,00</b></div>
+    <div class="acoes"><button id="copiar">Copiar lista</button><button id="limpar">Limpar</button></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== estado ===== */
+var jogo = 'Magic';
+var carrinho = [];
+var itemAtual = null;
+var auto = true;
+var lendo = false;
+var ultimoTexto = '';
+var worker = null;
+var stream = null;
+var usarFrontal = false;
+var buscaTimer = null;
+var ultimaBusca = '';
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function dinheiro(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
+function lerPreco(s){ s = String(s || '').replace(/[^0-9,\.]/g, '').replace(',', '.'); var v = parseFloat(s); return isNaN(v) ? 0 : v; }
+function status(t){ $('status').textContent = t || ''; }
+function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function(){ e.classList.remove('on'); }, 1800); }
+function ligaUrl(nome){
+  return jogo === 'Magic'
+    ? 'https://www.ligamagic.com.br/?view=cards/card&card=' + encodeURIComponent(nome)
+    : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
+}
+try { var salvo = JSON.parse(localStorage.getItem('balcao-carrinho') || '[]'); if (Array.isArray(salvo)) carrinho = salvo; } catch (e) {}
+
+/* ===== câmera ===== */
+function ligarCamera(){
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { semCamera('Este navegador não libera a câmera. Use o botão 📷 Foto.'); return; }
+  navigator.mediaDevices.getUserMedia({video: {facingMode: usarFrontal ? 'user' : {ideal: 'environment'}, width: {ideal: 1280}, height: {ideal: 960}}, audio: false})
+    .then(function(s){ stream = s; $('video').srcObject = s; $('lido').textContent = 'Mire o nome da carta no retângulo.'; if (auto) loopAuto(); })
+    .catch(function(e){ semCamera('Câmera bloqueada (' + e.name + '). Permita a câmera no navegador ou use 📷 Foto.'); });
+}
+function semCamera(msg){
+  var c = $('cam'); if (!c.querySelector('.semcam')) { var d = document.createElement('div'); d.className = 'semcam'; d.textContent = msg; c.appendChild(d); }
+  $('lido').textContent = '';
+}
+
+/* ===== OCR ===== */
+function getWorker(){
+  if (worker) return Promise.resolve(worker);
+  if (typeof Tesseract === 'undefined') return Promise.reject(new Error('leitor não carregou'));
+  status('Carregando leitor de texto (só na primeira vez)…');
+  return Tesseract.createWorker('eng').then(function(w){
+    worker = w;
+    return w.setParameters({tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'-,. ", tessedit_pageseg_mode: '7'}).then(function(){ status(''); return w; });
+  });
+}
+function recorteMira(){
+  var v = $('video');
+  if (!v.videoWidth) return null;
+  /* a mira cobre left 8%..92%, top 34%..50% do quadro exibido (object-fit:cover) */
+  var box = $('cam').getBoundingClientRect();
+  var escala = Math.max(box.width / v.videoWidth, box.height / v.videoHeight);
+  var vw = v.videoWidth * escala, vh = v.videoHeight * escala;
+  var offx = (vw - box.width) / 2, offy = (vh - box.height) / 2;
+  var sx = (box.width * 0.08 + offx) / escala, sy = (box.height * 0.34 + offy) / escala;
+  var sw = (box.width * 0.84) / escala, sh = (box.height * 0.16) / escala;
+  var cv = document.createElement('canvas');
+  var alvoW = 1000; var f = alvoW / sw;
+  cv.width = alvoW; cv.height = Math.round(sh * f);
+  var ctx = cv.getContext('2d');
+  ctx.drawImage(v, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+  preparar(ctx, cv.width, cv.height);
+  return cv;
+}
+function preparar(ctx, w, h){
+  var d = ctx.getImageData(0, 0, w, h), p = d.data;
+  for (var i = 0; i < p.length; i += 4) {
+    var g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+    g = (g - 128) * 1.5 + 128; g = g < 0 ? 0 : g > 255 ? 255 : g;
+    p[i] = p[i + 1] = p[i + 2] = g;
+  }
+  ctx.putImageData(d, 0, 0);
+}
+function limparTexto(t){
+  t = String(t || '').replace(/\n/g, ' ').replace(/[^A-Za-zÀ-ÿ' \-,]/g, ' ').replace(/\s+/g, ' ').trim();
+  var ruido = /^(basic|stage|evolves|from|hp|creature|instant|sorcery|enchantment|artifact|land|legendary|planeswalker|pokemon|ex|gx|the)$/i;
+  return t.split(' ').filter(function(w){ return w.length > 1 && !ruido.test(w); }).join(' ').trim();
+}
+function lerQuadro(){
+  if (lendo || itemAtual) return Promise.resolve();
+  var cv = recorteMira();
+  if (!cv) return Promise.resolve();
+  lendo = true;
+  return getWorker().then(function(w){ return w.recognize(cv); }).then(function(r){
+    var txt = limparTexto(r.data.text), conf = r.data.confidence || 0;
+    if (txt.length >= 3 && conf >= 40) {
+      $('lido').innerHTML = 'Li: <b>' + esc(txt) + '</b> (' + Math.round(conf) + '%)';
+      if (txt !== ultimoTexto) { ultimoTexto = txt; $('nome').value = txt; buscarNomes(txt, true); }
+    } else {
+      $('lido').textContent = 'Mire o nome da carta no retângulo… (' + (txt ? 'leitura fraca' : 'nada legível') + ')';
+    }
+  }).catch(function(e){ status('Erro no leitor: ' + (e && e.message ? e.message : e)); }).then(function(){ lendo = false; });
+}
+function loopAuto(){
+  if (!auto || !stream) return;
+  lerQuadro().then(function(){ setTimeout(loopAuto, 900); });
+}
+
+/* foto enviada (fallback) */
+function lerFoto(file){
+  if (!file) return;
+  var img = new Image();
+  img.onload = function(){
+    var W = Math.min(1600, img.naturalWidth), f = W / img.naturalWidth;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = Math.round(img.naturalHeight * f);
+    var ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, cv.width, cv.height); preparar(ctx, cv.width, cv.height);
+    status('Lendo a foto…');
+    getWorker().then(function(w){ return w.setParameters({tessedit_pageseg_mode: '3'}).then(function(){ return w.recognize(cv); }); }).then(function(r){
+      worker.setParameters({tessedit_pageseg_mode: '7'});
+      var linhas = (r.data.text || '').split('\n').map(limparTexto).filter(function(l){ return l.length >= 3; });
+      if (!linhas.length) { status('Não achei texto legível na foto.'); return; }
+      status('Testando ' + linhas.length + ' linhas da foto…');
+      testarLinhas(linhas.slice(0, 8));
+    }).catch(function(e){ status('Erro: ' + e.message); });
+  };
+  img.src = URL.createObjectURL(file);
+}
+function testarLinhas(linhas){
+  var i = 0;
+  (function prox(){
+    if (i >= linhas.length) { status('Nenhuma linha bateu com nome de carta. Digite o nome.'); return; }
+    var l = linhas[i++];
+    consultarNomes(l).then(function(nomes){
+      if (nomes.length) { $('nome').value = l; desenharSugestoes(nomes, l, true); status('Achei pela linha "' + l + '".'); }
+      else prox();
+    });
+  })();
+}
+
+/* ===== busca de nomes ===== */
+function consultarNomes(q){
+  var url = jogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(q)
+    : 'https://api.tcgdex.net/v2/en/cards?name=like:' + encodeURIComponent(q);
+  return fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if (!j) return [];
+    if (jogo === 'Magic') return (j.data || []).slice(0, 10);
+    var v = {}, out = []; (Array.isArray(j) ? j : []).forEach(function(c){ if (c.name && !v[c.name]) { v[c.name] = 1; out.push(c.name); } });
+    return out.slice(0, 10);
+  }).catch(function(){ return []; });
+}
+function buscarNomes(q, daCamera){
+  q = (q || '').trim();
+  if (q.length < 3) { $('sugestoes').innerHTML = ''; return; }
+  if (q === ultimaBusca && !daCamera) return;
+  ultimaBusca = q;
+  consultarNomes(q).then(function(nomes){
+    if (!nomes.length && jogo === 'Magic') {
+      return fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(q)).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(c){ desenharSugestoes(c && c.name ? [c.name] : [], q, daCamera); });
+    }
+    desenharSugestoes(nomes, q, daCamera);
+  });
+}
+function desenharSugestoes(nomes, q, daCamera){
+  var h = '';
+  nomes.forEach(function(n, i){ h += '<button class="' + (i === 0 && daCamera ? 'hit' : '') + '" data-nome="' + esc(n) + '">' + esc(n) + '</button>'; });
+  h += '<button data-nome="' + esc(q) + '">Usar "' + esc(q) + '" mesmo assim</button>';
+  $('sugestoes').innerHTML = h;
+  if (daCamera && nomes.length && navigator.vibrate) navigator.vibrate(40);
+}
+
+/* ===== item ===== */
+function escolherNome(nome){
+  itemAtual = {nome: nome, img: '', ed: ''};
+  desenharItem();
+  var url = jogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(nome)
+    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
+  fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if (!itemAtual || itemAtual.nome !== nome || !j) return;
+    if (jogo === 'Magic') {
+      itemAtual.img = j.image_uris ? j.image_uris.normal : (j.card_faces && j.card_faces[0].image_uris ? j.card_faces[0].image_uris.normal : '');
+      itemAtual.ed = (j.set_name || '') + (j.prices && j.prices.usd ? ' · ref. US$ ' + j.prices.usd : '');
+    } else {
+      var c = Array.isArray(j) ? j[0] : null;
+      if (c && c.image) itemAtual.img = c.image + '/high.webp';
+      itemAtual.ed = Array.isArray(j) ? j.length + ' impressões conhecidas' : '';
+    }
+    if ($('imgItem')) { if (itemAtual.img) { $('imgItem').src = itemAtual.img; $('imgItem').style.visibility = 'visible'; } $('edItem').textContent = itemAtual.ed; }
+  }).catch(function(){});
+}
+function desenharItem(){
+  if (!itemAtual) { $('item').innerHTML = ''; if (auto && stream && !lendo) loopAuto(); return; }
+  $('item').innerHTML = '<div class="item">' +
+    '<img id="imgItem" src="' + esc(itemAtual.img) + '" alt="" style="' + (itemAtual.img ? '' : 'visibility:hidden') + '">' +
+    '<div class="campos"><b>' + esc(itemAtual.nome) + '</b><span class="ed" id="edItem">' + esc(itemAtual.ed) + '</span>' +
+    '<a class="liga ' + (jogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrl(itemAtual.nome)) + '" target="_blank" rel="noopener">Ver preço na ' + (jogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + ' ↗</a>' +
+    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="decimal" placeholder="0,00"><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
+    '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div></div></div>';
+  $('item').scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+function adicionar(){
+  if (!itemAtual) return;
+  var p = lerPreco($('precoItem').value), q = parseInt($('qtdItem').value, 10) || 1;
+  carrinho.push({nome: itemAtual.nome, jogo: jogo, preco: p, qtd: q});
+  itemAtual = null; ultimoTexto = ''; ultimaBusca = '';
+  $('sugestoes').innerHTML = ''; $('nome').value = ''; status('');
+  salvar(); desenharCarrinho(); desenharItem(); toast('Adicionado');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function salvar(){ try { localStorage.setItem('balcao-carrinho', JSON.stringify(carrinho)); } catch (e) {} }
+function desenharCarrinho(){
+  var h = '', tot = 0;
+  carrinho.forEach(function(it, i){
+    var sub = it.preco * it.qtd; tot += sub;
+    h += '<div class="it"><span class="nm">' + esc(it.nome) + (it.qtd > 1 ? ' ×' + it.qtd : '') + '</span><span class="vl">' + dinheiro(sub) + '</span><button class="rm" data-i="' + i + '">✕</button></div>';
+  });
+  $('itens').innerHTML = h || '<div class="status">Nada ainda.</div>';
+  $('total').textContent = dinheiro(tot);
+}
+function copiar(){
+  var tot = 0, linhas = carrinho.map(function(it){ var s = it.preco * it.qtd; tot += s; return it.nome + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s); });
+  linhas.push('TOTAL — ' + dinheiro(tot));
+  var txt = linhas.join('\n');
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ toast('Lista copiada'); }, function(){ fallbackCopiar(txt); });
+  else fallbackCopiar(txt);
+}
+function fallbackCopiar(txt){ var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('Lista copiada'); } catch (e) {} ta.remove(); }
+
+/* ===== eventos ===== */
+document.addEventListener('click', function(ev){
+  var js = ev.target.closest('#jogoSel button');
+  if (js) { jogo = js.getAttribute('data-j'); document.querySelectorAll('#jogoSel button').forEach(function(b){ b.classList.toggle('on', b === js); }); itemAtual = null; ultimaBusca = ''; desenharItem(); buscarNomes($('nome').value); return; }
+  var sg = ev.target.closest('#sugestoes button');
+  if (sg) { escolherNome(sg.getAttribute('data-nome')); return; }
+  if (ev.target.closest('#addItem')) { adicionar(); return; }
+  if (ev.target.closest('#cancItem')) { itemAtual = null; ultimoTexto = ''; desenharItem(); return; }
+  var rm = ev.target.closest('.carrinho .rm');
+  if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); salvar(); desenharCarrinho(); return; }
+  if (ev.target.closest('#copiar')) { copiar(); return; }
+  if (ev.target.closest('#limpar')) { carrinho = []; salvar(); desenharCarrinho(); toast('Lista limpa'); return; }
+  if (ev.target.closest('#btLer')) { ultimoTexto = ''; lerQuadro(); return; }
+  if (ev.target.closest('#btAuto')) { auto = !auto; $('btAuto').textContent = 'Auto: ' + (auto ? 'ligado' : 'desligado'); if (auto) loopAuto(); return; }
+  if (ev.target.closest('#btTrocar')) { usarFrontal = !usarFrontal; ligarCamera(); return; }
+});
+$('foto').addEventListener('change', function(){ lerFoto(this.files && this.files[0]); this.value = ''; });
+$('nome').addEventListener('input', function(){ clearTimeout(buscaTimer); var v = this.value; buscaTimer = setTimeout(function(){ buscarNomes(v); }, 350); });
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Enter' && ev.target.id === 'precoItem') adicionar();
+  if (ev.key === 'Enter' && ev.target.id === 'nome') { var b = document.querySelector('#sugestoes button'); if (b) escolherNome(b.getAttribute('data-nome')); }
+});
+document.addEventListener('visibilitychange', function(){ if (document.hidden) { if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; } } else if (!stream) ligarCamera(); });
+
+desenharCarrinho();
+ligarCamera();
+</script>
+</body>
+</html>

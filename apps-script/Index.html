@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grimório</title>
+<style>
+:root{
+  --bg:#0c0a09;--bg2:#17120f;--card:#1f1915;--borda:#3a2e26;--txt:#f1e6d6;--txt2:#a89a88;
+  --ac:#ff8a2a;--ac2:#ffc247;--ok:#4cd17a;--quero:#5ab0ff;--troco:#c57bff;
+  --e1:#ff4d1c;--e2:#ff8a2a;--e3:#ffc247;--e4:#ff6a00;--e5:#7a1c00;
+}
+body[data-tema=pokemon]{
+  --bg:#070b14;--bg2:#0d1526;--card:#121c31;--borda:#243654;--txt:#e9f0ff;--txt2:#93a4c4;
+  --ac:#3fa9ff;--ac2:#ffd83d;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;transition:background .5s}
+img{max-width:100%}
+button{font:inherit;cursor:pointer}
+.tela{display:block;padding:14px;max-width:1200px;margin:0 auto}
+.tela:not(.ativa){display:none!important}
+
+/* cabeçalho */
+header{display:none;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--borda);position:sticky;top:0;z-index:5}
+header.ativa{display:flex}
+header h1{font-size:18px;margin:0;flex:1;display:flex;align-items:center;gap:10px}
+header h1 img{height:26px;width:auto}
+.voltar{background:transparent;color:var(--txt2);border:1px solid var(--borda);border-radius:8px;padding:6px 10px}
+.voltar:hover{color:var(--txt);border-color:var(--ac)}
+
+/* ===== TELA 1: UNIVERSO ===== */
+#universo{position:relative;min-height:100vh;padding:0;overflow:hidden;max-width:none;
+  background:radial-gradient(ellipse 60% 50% at 30% 35%,rgba(120,30,8,.45),transparent 70%),
+             radial-gradient(ellipse 60% 50% at 70% 35%,rgba(20,60,160,.45),transparent 70%),
+             radial-gradient(ellipse at 50% 100%,#1a1109,#000 60%),#000}
+.cena{position:relative;width:100%;height:100vh;min-height:620px;max-width:1700px;margin:0 auto;font-family:Georgia,"Times New Roman",serif}
+#particulas{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.topo-orn{position:absolute;left:0;right:0;top:0;z-index:6;display:flex;align-items:center;gap:14px;padding:16px 3% 18px;
+  background:linear-gradient(#000 0,#000 60%,rgba(0,0,0,0));color:#f3dfb0}
+.topo-orn .linha{flex:1;height:1px;background:linear-gradient(90deg,transparent,#c9a24a 15%,#c9a24a 85%,transparent);position:relative}
+.topo-orn .linha::after{content:"";position:absolute;left:50%;top:-5px;width:9px;height:9px;transform:translateX(-50%) rotate(45deg);border:1px solid #c9a24a;background:#000}
+.topo-orn .nome{font-size:clamp(16px,1.7vw,26px);letter-spacing:5px;text-transform:uppercase;text-shadow:0 0 12px rgba(201,162,74,.6)}
+.topo-orn .sub{font-size:clamp(9px,.9vw,13px);letter-spacing:3px;color:#b59a63;text-transform:uppercase}
+
+/* estandartes */
+.estandarte{position:absolute;top:0;z-index:2;width:clamp(70px,9vw,150px);aspect-ratio:9/16;
+  clip-path:polygon(0 0,100% 0,100% 84%,50% 100%,0 84%);display:flex;align-items:center;justify-content:center;
+  transform-origin:top center;animation:balanco 7s ease-in-out infinite}
+.estandarte.esq{left:3%;background:linear-gradient(#6b0d0d,#b3200f 40%,#4a0808)}
+.estandarte.dir{right:3%;background:linear-gradient(#0f2a6e,#1f5fd8 40%,#0a1a4a);animation-delay:-3s}
+.estandarte::before{content:"";position:absolute;inset:6% 8% 10%;clip-path:polygon(0 0,100% 0,100% 84%,50% 100%,0 84%);border:2px solid rgba(255,205,110,.55);
+  background:rgba(0,0,0,.12)}
+.estandarte svg{width:62%;height:auto;position:relative;filter:drop-shadow(0 0 8px rgba(255,180,60,.8))}
+.estandarte.dir svg{filter:drop-shadow(0 0 8px rgba(255,255,255,.9))}
+@keyframes balanco{0%,100%{transform:rotate(-1.5deg)}50%{transform:rotate(1.5deg)}}
+
+/* cartas flutuantes */
+.cartinha{position:absolute;z-index:2;width:clamp(34px,4.6vw,78px);aspect-ratio:63/88;border-radius:7%;
+  display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.18);
+  animation:flutuar var(--d,7s) ease-in-out infinite;animation-delay:var(--a,0s);transform:rotate(var(--r,0deg))}
+.cartinha.m{background:radial-gradient(circle at 50% 40%,#ff9a3c,#b3330f 55%,#4a0f05);box-shadow:0 0 18px rgba(255,120,40,.6)}
+.cartinha.p{background:radial-gradient(circle at 50% 40%,#8fd3ff,#2360d8 55%,#0a1f5c);box-shadow:0 0 18px rgba(80,160,255,.7)}
+.cartinha svg{width:55%;height:auto;opacity:.9}
+.cartinha.longe{filter:blur(1.2px);opacity:.75}
+.cartinha.perto{filter:blur(2.5px);z-index:5}
+@keyframes flutuar{0%,100%{translate:0 0}50%{translate:0 -14px}}
+
+/* orbes */
+.orbe{position:absolute;z-index:4;background:none;border:0;padding:0;color:inherit;cursor:pointer;outline:0;
+  width:clamp(130px,17vw,270px);aspect-ratio:1;top:30%;perspective:700px}
+.orbe.mtg{left:50%;margin-left:calc(-1 * clamp(130px,17vw,270px) - 6vw)}
+.orbe.pkm{left:50%;margin-left:6vw}
+.nucleo{position:absolute;inset:14%;border-radius:50%;display:flex;align-items:center;justify-content:center;transition:transform .3s,box-shadow .3s}
+.orbe.mtg .nucleo{background:radial-gradient(circle at 35% 28%,#5c1d0c,#1b0705 55%,#000 100%);box-shadow:0 0 40px 6px rgba(255,80,20,.55),inset 0 0 30px rgba(255,90,30,.35),inset 0 -10px 30px #000}
+.orbe.pkm .nucleo{background:radial-gradient(circle at 38% 30%,#ff8a8a,#e0262a 35%,#8f0f14 72%,#3a0406 100%);box-shadow:0 0 40px 6px rgba(255,70,70,.65),inset 0 -14px 30px rgba(60,0,0,.7),inset 0 10px 20px rgba(255,255,255,.25)}
+.orbe.pkm .nucleo i{position:absolute;inset:31%;border-radius:50%;background:radial-gradient(circle at 45% 40%,#fff,#fff 35%,#ffd6d6 70%,#ffb3b3);box-shadow:inset 0 6px 12px rgba(140,0,0,.55),inset 0 -3px 6px rgba(255,255,255,.9),0 0 18px #fff,0 0 45px rgba(255,200,200,.9),0 0 90px rgba(255,120,120,.6);animation:pulsar 2.8s ease-in-out infinite}
+@keyframes pulsar{0%,100%{box-shadow:inset 0 6px 12px rgba(140,0,0,.55),inset 0 -3px 6px rgba(255,255,255,.9),0 0 18px #fff,0 0 45px rgba(255,200,200,.9),0 0 90px rgba(255,120,120,.6)}50%{box-shadow:inset 0 6px 12px rgba(140,0,0,.55),inset 0 -3px 6px rgba(255,255,255,.9),0 0 28px #fff,0 0 70px rgba(255,220,220,1),0 0 120px rgba(255,140,140,.8)}}
+.nucleo svg{width:60%;height:60%}
+.orbe.mtg .nucleo svg{filter:drop-shadow(0 0 10px #ff5a1c) drop-shadow(0 0 22px #ff3b00)}
+.orbe.pkm .nucleo svg{display:none}
+.orbe:hover .nucleo,.orbe:focus-visible .nucleo{transform:scale(1.06)}
+.orbe.mtg:hover .nucleo{box-shadow:0 0 70px 14px rgba(255,100,30,.8),inset 0 0 30px rgba(255,90,30,.35)}
+.orbe.pkm:hover .nucleo{box-shadow:0 0 70px 14px rgba(255,90,90,.85),inset 0 -14px 30px rgba(60,0,0,.7)}
+.anel{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;pointer-events:none}
+.orbe.mtg .anel{border-top-color:#ff8a2a;border-right-color:rgba(255,70,20,.35);filter:drop-shadow(0 0 6px rgba(255,110,30,.8))}
+.orbe.pkm .anel{border-top-color:#fff;border-right-color:rgba(255,90,90,.5);filter:drop-shadow(0 0 6px rgba(255,120,120,.9))}
+.anel.a1{transform:rotateX(68deg) rotateZ(0deg);animation:orbita 6s linear infinite}
+.anel.a2{inset:-12%;transform:rotateX(70deg) rotateY(20deg);animation:orbita2 9s linear infinite}
+.anel.a3{inset:-22%;transform:rotateX(65deg) rotateY(-25deg);animation:orbita 13s linear infinite reverse;opacity:.7}
+.orbe:hover .anel{animation-duration:2.5s}
+@keyframes orbita{to{transform:rotateX(68deg) rotateZ(360deg)}}
+@keyframes orbita2{to{transform:rotateX(70deg) rotateY(20deg) rotateZ(-360deg)}}
+.orbe b{position:absolute;left:-30%;right:-30%;top:106%;text-align:center;font-size:clamp(12px,1.3vw,20px);letter-spacing:5px;text-transform:uppercase;font-weight:600;color:#f3e6c8;text-shadow:0 0 10px #000,0 0 18px #000}
+.orbe.mtg b{text-shadow:0 0 12px #ff6a1c,0 0 4px #000}
+.orbe.pkm b{text-shadow:0 0 12px #ff5a5a,0 0 4px #000}
+
+/* livro */
+.livro{position:absolute;left:50%;bottom:-2%;z-index:3;width:clamp(320px,62vw,1000px);transform:translateX(-50%) perspective(1100px) rotateX(18deg);transform-origin:bottom center;pointer-events:none}
+.livro svg{width:100%;height:auto;display:block;filter:drop-shadow(0 -10px 40px rgba(255,150,60,.25)) drop-shadow(0 20px 30px #000)}
+.brilho-livro{position:absolute;left:50%;bottom:28%;width:40vw;height:18vw;transform:translateX(-50%);z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse,rgba(255,170,80,.35),rgba(80,120,255,.2) 50%,transparent 70%);filter:blur(10px)}
+
+@media (max-width:700px){
+  .orbe{top:20%;width:clamp(110px,34vw,160px)}
+  .orbe.mtg{margin-left:calc(-1 * clamp(110px,34vw,160px) - 3vw)}
+  .orbe.pkm{margin-left:3vw}
+  .estandarte{width:14vw}
+  .livro{width:120vw;bottom:0}
+}
+@keyframes girar{to{transform:rotate(360deg)}}
+
+/* ===== TELA 2: COLEÇÕES (mesma cena, pacotes no lugar dos orbes) ===== */
+.topo-orn .voltar-orn{background:none;border:1px solid rgba(201,162,74,.6);color:#f3dfb0;border-radius:6px;padding:4px 10px;font:inherit;font-size:clamp(10px,.9vw,13px);letter-spacing:2px;text-transform:uppercase;cursor:pointer}
+.topo-orn .voltar-orn:hover{background:rgba(201,162,74,.15)}
+.anel-g{position:absolute;left:50%;top:40%;width:80vw;max-width:1250px;height:52vh;transform:translate(-50%,-50%);border-radius:50%;z-index:2;pointer-events:none;
+  --ang:0deg;background:conic-gradient(from var(--ang),transparent 0 40%,var(--cg) 58%,#fff 70%,var(--cg) 82%,transparent 96%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 4px),#000 calc(100% - 3px));
+  filter:drop-shadow(0 0 6px var(--cg)) drop-shadow(0 0 14px var(--cg));animation:anelg 7s linear infinite}
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+.anel-g.b{width:92vw;max-width:1450px;height:62vh;animation-duration:11s;animation-direction:reverse;opacity:.7}
+.anel-g.c{width:68vw;max-width:1050px;height:42vh;animation-duration:5s;opacity:.8}
+@keyframes anelg{to{--ang:360deg}}
+body:not([data-tema=pokemon]) .anel-g{--cg:#ff6a2a}
+body[data-tema=pokemon] .anel-g{--cg:#5cc8ff}
+.pacote{position:absolute;z-index:4;left:calc(50% + var(--x));top:var(--y);width:clamp(104px,12.5vw,190px);aspect-ratio:2/3.1;
+  transform:translateX(-50%) rotate(var(--r));background:linear-gradient(160deg,var(--c1),var(--c2) 60%,#0a0a0a);
+  border-radius:6px;border:0;padding:0;color:#fff;cursor:pointer;outline:0;overflow:hidden;font-family:Georgia,"Times New Roman",serif;
+  box-shadow:0 10px 30px rgba(0,0,0,.7),0 0 24px var(--cg,rgba(255,120,40,.35));transition:transform .25s,box-shadow .25s}
+.pacote:hover,.pacote:focus-visible{transform:translateX(-50%) rotate(var(--r)) translateY(-10px) scale(1.05);box-shadow:0 20px 40px rgba(0,0,0,.8),0 0 40px var(--cg,rgba(255,120,40,.7));z-index:6}
+.pacote .crimpa{position:absolute;left:0;right:0;height:9px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.35) 0 6px,rgba(0,0,0,.35) 6px 12px)}
+.pacote .crimpa.t{top:0}.pacote .crimpa.b{bottom:0}
+.pacote .ic{position:absolute;top:14px;left:8px;width:30%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);border-radius:8px;border:1px solid rgba(255,255,255,.25)}
+.pacote .ic img{max-width:78%;max-height:78%;object-fit:contain}
+.pacote .ic img.inv{filter:invert(1) drop-shadow(0 0 3px rgba(255,255,255,.6))}
+.pacote .ic svg{width:70%;height:70%;color:#fff}
+.pacote .sel{position:absolute;top:14px;right:8px;font-size:9px;letter-spacing:1px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.3);text-transform:uppercase}
+.pacote .arte{position:absolute;left:8%;right:8%;top:24%;height:48%;border-radius:6px;overflow:hidden;background:#000;box-shadow:inset 0 0 20px #000,0 0 0 1px rgba(255,255,255,.25)}
+.pacote .arte img{width:100%;height:100%;object-fit:cover;object-position:center 20%;display:block}
+.pacote .faixa{position:absolute;left:0;right:0;bottom:9px;padding:6px 8px 8px;background:linear-gradient(transparent,rgba(0,0,0,.75) 30%);text-align:center}
+.pacote .faixa b{display:block;font-size:clamp(10px,.95vw,14px);line-height:1.15;text-transform:uppercase;letter-spacing:1px;text-shadow:0 1px 3px #000}
+.pacote .faixa i{display:block;font-style:normal;font-size:clamp(9px,.8vw,12px);color:#ffe3a3;margin-top:3px}
+.pacote .faixa .barra{display:block;margin-top:6px;height:5px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden}
+.pacote .faixa .barra em{display:block;height:100%;background:linear-gradient(90deg,#ffb347,#fff0c0)}
+.pacote.foto{background:none;box-shadow:none;border-radius:0;overflow:visible;aspect-ratio:auto;width:clamp(120px,14vw,215px)}
+.pacote.foto .fotoPac{display:block;width:100%;height:auto;min-height:1px;opacity:0;transition:opacity .4s,filter .25s}
+.pacote.foto .fotoPac.ok{opacity:1}
+.pacote.foto:not(:has(.fotoPac.ok)){background:linear-gradient(160deg,var(--c1),var(--c2) 60%,#0a0a0a);border-radius:6px;aspect-ratio:2/3.1;box-shadow:0 10px 30px rgba(0,0,0,.7)}
+.pacote.foto:not(:has(.fotoPac.ok)) .fotoPac{position:absolute;inset:0;height:100%}
+.pacote.foto:not(:has(.fotoPac.ok)) .faixa{position:absolute;left:0;right:0;bottom:0;margin:0;border:0;background:linear-gradient(transparent,rgba(0,0,0,.8) 30%)}
+.pacote.foto .fotoPac{filter:drop-shadow(0 12px 22px rgba(0,0,0,.8)) drop-shadow(0 0 16px var(--cg,rgba(255,120,40,.45)));transition:filter .25s}
+.pacote.foto:hover .fotoPac{filter:drop-shadow(0 18px 30px rgba(0,0,0,.9)) drop-shadow(0 0 30px var(--cg,rgba(255,120,40,.8)))}
+.pacote.foto:hover,.pacote.foto:focus-visible{box-shadow:none}
+.pacote.foto .faixa{display:block;position:relative;left:auto;right:auto;bottom:auto;margin-top:-4px;background:rgba(0,0,0,.72);border:1px solid rgba(201,162,74,.5);border-radius:6px;padding:6px 8px 8px}
+body:not([data-tema=pokemon]) .pacote{--cg:rgba(255,120,40,.5)}
+body[data-tema=pokemon] .pacote{--cg:rgba(90,170,255,.6)}
+.pacote.nenhum{display:none}
+.vazio-cena{position:absolute;left:0;right:0;top:40%;z-index:4;text-align:center;color:#b59a63;letter-spacing:2px}
+@media (max-width:700px){
+  .anel-g{display:none}
+  .topo-orn .sub{display:none}
+  .pacotes-mob{position:absolute;left:0;right:0;top:64px;bottom:0;overflow:auto;z-index:4;display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-content:flex-start;padding:10px 10px 40px}
+  .pacotes-mob .pacote{position:relative;left:auto;top:auto;transform:none;width:42vw}
+  .pacotes-mob .pacote:hover{transform:translateY(-6px)}
+  .cena.modo-colecoes .livro,.cena.modo-colecoes .estandarte,.cena.modo-colecoes .cartinha{display:none}
+}
+.barra{height:6px;background:rgba(255,255,255,.08);border-radius:4px;overflow:hidden}
+.barra i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2))}
+
+/* ===== TELA 5: BALCÃO (escanear, ver na Liga, somar) ===== */
+.topo-orn .balcao-orn{margin-left:10px;background:none;border:1px solid rgba(201,162,74,.6);color:#f3dfb0;border-radius:6px;padding:4px 10px;font:inherit;font-size:clamp(10px,.9vw,13px);letter-spacing:2px;text-transform:uppercase;cursor:pointer}
+.topo-orn .balcao-orn:hover{background:rgba(201,162,74,.15)}
+.bal{max-width:760px;margin:0 auto}
+.bal .linha1{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.jogo-sel{display:flex;border:1px solid var(--borda);border-radius:20px;overflow:hidden}
+.jogo-sel button{background:var(--card);border:0;color:var(--txt2);padding:7px 14px}
+.jogo-sel button.on{background:var(--ac);color:#000;font-weight:600}
+.btn-cam{background:var(--ac);color:#000;font-weight:600;border-radius:20px;padding:8px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.btn-cam input{display:none}
+.bal input.nome{flex:1;min-width:180px;background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:8px 14px}
+.bal .status{color:var(--txt2);font-size:13px;min-height:18px;margin-bottom:8px}
+.bal .previa{max-height:120px;border-radius:8px;border:1px solid var(--borda);display:none;margin-bottom:8px}
+.sugestoes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.sugestoes button{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:16px;padding:6px 12px;font-size:13px}
+.sugestoes button:hover{border-color:var(--ac)}
+.item-edit{background:var(--card);border:1px solid var(--ac);border-radius:14px;padding:12px;margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.item-edit img{width:110px;border-radius:6px}
+.item-edit .campos{flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px}
+.item-edit .campos b{font-size:16px}
+.item-edit .campos .edicao{color:var(--txt2);font-size:12px}
+.item-edit .liga{display:inline-block;background:#1e5bd8;color:#fff;text-decoration:none;border-radius:8px;padding:8px 12px;font-weight:600;text-align:center}
+.item-edit .liga.pk{background:#d62828}
+.item-edit .preco{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.item-edit .preco input{width:110px;background:var(--bg);border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:16px}
+.item-edit .preco input.qtd{width:60px}
+.item-edit .add{background:var(--ok);color:#000;font-weight:700;border:0;border-radius:8px;padding:9px 14px}
+.item-edit .canc{background:transparent;border:1px solid var(--borda);color:var(--txt2);border-radius:8px;padding:9px 12px}
+.carrinho{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px}
+.carrinho h3{margin:0 0 8px;font-size:15px;color:var(--txt2);text-transform:uppercase;letter-spacing:1px}
+.carrinho .it{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--borda);font-size:14px}
+.carrinho .it:last-child{border-bottom:0}
+.carrinho .it .nm{flex:1}
+.carrinho .it .vl{color:var(--ac2);font-weight:600}
+.carrinho .it .rm{background:transparent;border:0;color:var(--txt2);font-size:16px;padding:0 6px}
+.carrinho .tot{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:18px}
+.carrinho .tot b{color:var(--ac2);font-size:22px}
+.carrinho .acoes2{display:flex;gap:8px;margin-top:10px}
+.carrinho .acoes2 button{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:7px 12px}
+
+/* ===== TELA 4: POKÉDEX 251 ===== */
+.grade-dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.slot{background:var(--card);border:1px solid var(--borda);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;padding:0;color:inherit;display:block;width:100%;transition:transform .15s,border-color .15s}
+.slot:hover{transform:translateY(-2px);border-color:var(--ac)}
+.slot.tenho{border-color:var(--ok);box-shadow:0 0 12px rgba(76,209,122,.25)}
+.slot.quero{border-color:var(--quero)}
+.slot.sem-carta{opacity:.55}
+.slot .img{width:100%;aspect-ratio:63/88;background:#000;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:26px;font-weight:700;position:relative}
+.slot .img img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .img .qtd{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.7);color:#fff;font-size:10px;padding:2px 6px;border-radius:6px}
+.slot .img .est{position:absolute;top:6px;right:6px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;color:#000}
+.slot .info{width:100%;padding:6px 8px;font-size:12px;line-height:1.2}
+.slot .info .n{color:var(--txt2);font-size:10px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:50;display:flex;align-items:center;justify-content:center;padding:14px}
+.modal .caixa{background:var(--bg2);border:1px solid var(--borda);border-radius:14px;max-width:960px;width:100%;max-height:92vh;overflow:auto;padding:14px}
+.modal .cab{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.modal .cab h2{margin:0;font-size:18px;flex:1}
+.modal .fechar{background:transparent;border:1px solid var(--borda);color:var(--txt);border-radius:8px;padding:6px 10px}
+.modal .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.modal .cands .carta .info .n{font-size:10px}
+.modal .nada{color:var(--txt2);padding:20px;text-align:center}
+
+/* ===== TELA 3: CARTAS ===== */
+.filtros{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filtros button{background:var(--card);border:1px solid var(--borda);color:var(--txt2);border-radius:20px;padding:6px 14px}
+.filtros button.on{background:var(--ac);border-color:var(--ac);color:#000;font-weight:600}
+.filtros input{background:var(--card);border:1px solid var(--borda);color:var(--txt);border-radius:20px;padding:7px 14px;min-width:160px;flex:1}
+.contagem{color:var(--txt2);font-size:13px;margin-bottom:10px}
+.grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.carta{background:var(--card);border:1px solid var(--borda);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.carta.tenho{border-color:var(--ok)}
+.carta.quero{border-color:var(--quero)}
+.carta.troco{border-color:var(--troco)}
+.carta .img{aspect-ratio:63/88;background:#000;position:relative}
+.carta .img img{width:100%;height:100%;object-fit:cover;display:block}
+.carta .img .fa{position:absolute;top:6px;left:6px;background:var(--ac2);color:#000;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px}
+.carta .img .est{position:absolute;top:6px;right:6px;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;color:#000}
+.carta .info{padding:8px 10px;font-size:13px}
+.carta .info .n{color:var(--txt2);font-size:11px}
+.carta .info .p{color:var(--ac2);font-size:12px}
+.carta .acoes{display:flex;border-top:1px solid var(--borda)}
+.carta .acoes button{flex:1;background:transparent;border:0;color:var(--txt2);padding:8px 0;font-size:12px;border-right:1px solid var(--borda)}
+.carta .acoes button:last-child{border-right:0}
+.carta .acoes button.on.t{background:var(--ok);color:#000;font-weight:700}
+.carta .acoes button.on.q{background:var(--quero);color:#000;font-weight:700}
+.carta .acoes button.on.x{background:var(--troco);color:#000;font-weight:700}
+.vazio{color:var(--txt2);padding:40px;text-align:center}
+.carregando{color:var(--txt2);padding:40px;text-align:center;letter-spacing:2px;text-transform:uppercase;font-size:13px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+
+<header id="cab">
+  <button class="voltar" data-ir="universo">⟵ Universo</button>
+  <button class="voltar" data-ir="colecoes" id="btColecoes" style="display:none">⟵ Coleções</button>
+  <h1 id="titulo">Grimório</h1>
+</header>
+
+<section id="universo" class="tela ativa">
+  <div class="cena" id="cena">
+    <canvas id="particulas"></canvas>
+    <div class="topo-orn"><button class="voltar-orn" id="btVoltarOrn" data-ir="universo" style="display:none">⟵ Universo</button><span class="nome" id="nomeOrn">Grimório</span><span class="linha"></span><span class="sub" id="subOrn">Escolha o universo</span><button class="balcao-orn" id="btBalcao">Balcão</button></div>
+    <div id="orbes"></div>
+  </div>
+</section>
+
+<section id="balcao" class="tela">
+  <div class="bal">
+    <div class="linha1">
+      <div class="jogo-sel" id="jogoSel"><button data-j="Magic" class="on">Magic</button><button data-j="Pokémon">Pokémon</button></div>
+      <label class="btn-cam">📷 Escanear<input type="file" id="fotoCarta" accept="image/*" capture="environment"></label>
+      <input class="nome" id="nomeManual" placeholder="ou digite o nome da carta">
+    </div>
+    <div class="status" id="ocrStatus"></div>
+    <img class="previa" id="previa" alt="">
+    <div class="sugestoes" id="sugestoes"></div>
+    <div id="itemEdit"></div>
+    <div class="carrinho">
+      <h3>Levando</h3>
+      <div id="itens"><div class="status">Nada ainda.</div></div>
+      <div class="tot"><span>Total</span><b id="totalBal">R$ 0,00</b></div>
+      <div class="acoes2"><button id="copiarBal">Copiar lista</button><button id="limparBal">Limpar</button></div>
+    </div>
+  </div>
+</section>
+
+<section id="dex" class="tela">
+  <div class="filtros" id="filtrosDex">
+    <button data-f="todos">Todos</button>
+    <button data-f="faltam">Faltam</button>
+    <button data-f="tenho">Tenho</button>
+    <button data-f="quero">Quero</button>
+    <button data-f="sem">Sem carta conhecida</button>
+    <input id="buscaDex" placeholder="buscar nome ou nº">
+  </div>
+  <div class="contagem" id="contagemDex"></div>
+  <div class="grade-dex" id="gradeDex"></div>
+</section>
+
+<section id="cartas" class="tela">
+  <div class="filtros" id="filtros">
+    <button data-f="fa">Arte inteira</button>
+    <button data-f="todas">Todas</button>
+    <button data-f="faltam">Faltam</button>
+    <button data-f="tenho">Tenho</button>
+    <button data-f="quero">Quero</button>
+    <button data-f="troco">Troco</button>
+    <input id="busca" placeholder="buscar nome ou nº">
+  </div>
+  <div class="contagem" id="contagem"></div>
+  <div class="grade" id="grade"></div>
+</section>
+
+<script>
+/* DIAGNÓSTICO: este bloco roda separado do código principal */
+document.getElementById('orbes').innerHTML = '<div id="diag" style="color:#ffd83d;font-family:monospace;font-size:13px">[1] JavaScript ligado. Carregando orbes…</div>';
+window.onerror = function(msg, src, lin, col){
+  var o = document.getElementById('orbes');
+  if (o) o.innerHTML = '<div style="color:#ff6b6b;font-family:monospace;font-size:13px;max-width:600px;word-break:break-word">ERRO: ' + msg + ' (linha ' + lin + ', coluna ' + col + ')</div>';
+};
+</script>
+<script>
+/* ===== DADOS ===== */
+var JOGOS = {
+  'Magic':   {tema:'magic',   cls:'mtg'},
+  'Pokémon': {tema:'pokemon', cls:'pkm'}
+};
+
+/* emblemas originais (desenhos próprios) */
+var EMBLEMA = {
+  'Magic': '<svg viewBox="0 0 100 100">' +
+    '<defs><linearGradient id="gM" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3b00"/><stop offset="1" stop-color="#ffc24a"/></linearGradient></defs>' +
+    '<path fill="url(#gM)" d="M43 94 L43 66 L8 66 L8 58 L11 58 L11 38 L5 24 L19 27 L17 38 L17 58 L28 58 L28 28 L23 12 L37 15 L34 28 L34 58 L43 58 L43 16 L50 0 L57 16 L57 58 L66 58 L66 28 L63 15 L77 12 L72 28 L72 58 L83 58 L83 38 L81 27 L95 24 L89 38 L89 58 L92 58 L92 66 L57 66 L57 94 L50 100 Z"/>' +
+    '<path fill="#fff6d0" opacity=".85" d="M47 20 L50 10 L53 20 L53 56 L47 56 Z"/>' +
+    '</svg>',
+  'Pokémon': '<svg viewBox="0 0 100 100">' +
+    '<defs><radialGradient id="gP" cx=".45" cy=".4" r=".6"><stop offset="0" stop-color="#fff"/><stop offset=".45" stop-color="#ffd0d0"/><stop offset="1" stop-color="#e0262a"/></radialGradient></defs>' +
+    '<circle cx="50" cy="50" r="34" fill="none" stroke="rgba(255,255,255,.6)" stroke-width="2" stroke-dasharray="5 6"/>' +
+    '<circle cx="50" cy="50" r="22" fill="url(#gP)"/>' +
+    '<circle cx="50" cy="50" r="11" fill="#fff"/>' +
+    '</svg>'
+};
+
+/* emblema genérico de coleção (usado quando não há símbolo oficial) */
+var EMBLEMA_SET = '<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">' +
+  '<rect x="22" y="14" width="56" height="72" rx="8"/>' +
+  '<path d="M34 34 h32 M34 48 h32 M34 62 h20"/>' +
+  '</svg>';
+
+var jogoAtual = '';
+var setAtual = '';
+var nomeSetAtual = '';
+var cartas = [];
+var filtro = 'fa';
+var setsCache = null;
+
+/* ===== UTIL ===== */
+function esc(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function $(id){ return document.getElementById(id); }
+function mostrar(tela){
+  var telas = document.querySelectorAll('.tela');
+  for (var i = 0; i < telas.length; i++) telas[i].classList.toggle('ativa', telas[i].id === tela);
+  if (tela === 'colecoes') { telas = document.querySelectorAll('#universo'); $('universo').classList.add('ativa'); }
+  $('cab').classList.toggle('ativa', tela === 'cartas' || tela === 'dex' || tela === 'balcao');
+  $('btColecoes').style.display = (tela === 'cartas' || tela === 'dex') ? '' : 'none';
+  window.scrollTo(0, 0);
+}
+
+/* ===== TELA 1 ===== */
+var LIVRO_SVG = '<svg viewBox="0 0 1000 420">' +
+  '<defs>' +
+  '<linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1dfb5"/><stop offset="1" stop-color="#c9a970"/></linearGradient>' +
+  '<linearGradient id="cp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2a16"/><stop offset="1" stop-color="#1e100a"/></linearGradient>' +
+  '<linearGradient id="sp" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8a1c10"/><stop offset=".5" stop-color="#2a0c08"/><stop offset="1" stop-color="#143a8a"/></linearGradient>' +
+  '</defs>' +
+  /* capa */
+  '<path d="M40 300 Q500 250 960 300 L985 400 Q500 360 15 400 Z" fill="url(#cp)" stroke="#7a5a2a" stroke-width="3"/>' +
+  '<path d="M60 318 Q500 272 940 318" fill="none" stroke="#c9a24a" stroke-width="2" opacity=".7"/>' +
+  '<path d="M80 345 L150 338 L140 388 L70 392 Z" fill="#6b1512" stroke="#c9a24a" stroke-width="2"/>' +
+  '<path d="M850 338 L920 345 L930 392 L860 388 Z" fill="#153a7a" stroke="#c9a24a" stroke-width="2"/>' +
+  /* páginas */
+  '<path d="M60 300 Q280 230 500 290 L500 60 Q280 20 60 70 Z" fill="url(#pg)" stroke="#9a7c48" stroke-width="2"/>' +
+  '<path d="M940 300 Q720 230 500 290 L500 60 Q720 20 940 70 Z" fill="url(#pg)" stroke="#9a7c48" stroke-width="2"/>' +
+  '<path d="M70 310 Q280 240 500 300 L500 310 Q280 250 70 320 Z M930 310 Q720 240 500 300 L500 310 Q720 250 930 320 Z" fill="#e2cc9a" stroke="#9a7c48" stroke-width="1"/>' +
+  /* lombada */
+  '<path d="M480 60 Q500 55 520 60 L520 290 Q500 300 480 290 Z" fill="url(#sp)"/>' +
+  '<circle cx="500" cy="335" r="22" fill="#2a1a0c" stroke="#c9a24a" stroke-width="3"/><circle cx="500" cy="335" r="9" fill="none" stroke="#c9a24a" stroke-width="2"/>' +
+  /* esquerda: dragão + sigilo */
+  /* cabeça de dragão (silhueta) */
+  '<g transform="translate(225 70) scale(1.05)" opacity=".8">' +
+  '<path fill="#5a3a1a" d="M20 170 C30 120 45 95 70 78 L60 30 L88 68 L98 64 L96 14 L118 62 C140 62 160 70 178 84 L204 90 L180 100 L196 118 L160 112 L170 132 L140 124 L120 136 C110 146 100 150 90 150 C80 160 70 175 60 190 Z"/>' +
+  '<circle cx="138" cy="86" r="5" fill="#efdcb4"/>' +
+  '<path fill="#5a3a1a" d="M30 150 L22 128 L40 140 Z M46 112 L44 90 L58 108 Z"/>' +
+  '<path fill="none" stroke="#5a3a1a" stroke-width="2" stroke-linecap="round" d="M150 108 Q160 104 168 110 M100 120 Q112 112 126 118"/>' +
+  '</g>' +
+  '<rect x="110" y="195" width="70" height="70" fill="none" stroke="#5a3a1a" stroke-width="2.5" transform="rotate(-4 145 230)"/>' +
+  '<path transform="translate(125 210) scale(.4) rotate(-4)" fill="#5a3a1a" d="M43 94 L43 66 L8 66 L8 58 L11 58 L11 38 L5 24 L19 27 L17 38 L17 58 L28 58 L28 28 L23 12 L37 15 L34 28 L34 58 L43 58 L43 16 L50 0 L57 16 L57 58 L66 58 L66 28 L63 15 L77 12 L72 28 L72 58 L83 58 L83 38 L81 27 L95 24 L89 38 L89 58 L92 58 L92 66 L57 66 L57 94 L50 100 Z"/>' +
+  '<g stroke="#6a4a22" stroke-width="2" opacity=".6"><path d="M110 100 h90 M110 115 h60 M110 130 h100 M110 150 h70 M300 240 h130 M300 255 h90 M300 270 h110"/></g>' +
+  /* direita: esferas + raio + runas */
+  '<g fill="none" stroke="#3a3a5a" stroke-width="2.5" opacity=".85">' +
+  '<circle cx="600" cy="120" r="26"/><circle cx="600" cy="120" r="10"/><circle cx="700" cy="110" r="14"/><circle cx="830" cy="150" r="22"/><circle cx="830" cy="150" r="7"/>' +
+  '<path d="M760 170 L735 215 L752 215 L742 250 L772 205 L755 205 Z"/>' +
+  '<path d="M560 200 L540 240 L560 240 L548 275 L580 232 L562 232 Z" opacity=".6"/>' +
+  '</g>' +
+  '<g stroke="#4a4a6a" stroke-width="2" opacity=".6"><path d="M640 95 h80 M640 110 h110 M640 140 h60 M560 185 h130 M620 200 h100 M620 215 h70 M650 250 h120 M650 265 h80"/></g>' +
+  '</svg>';
+
+var CARTINHAS = [
+  /* [classe, left%, top%, rotação, duração, atraso, profundidade] */
+  ['m',12,22,-18,7,0,'longe'],['m',20,40,12,8,-2,''],['m',30,12,-8,6,-1,''],['m',16,55,20,9,-4,''],['m',22,6,-15,7,-3,''],['m',6,66,25,8,-5,'perto'],
+  ['p',64,12,10,7,-1,''],['p',72,26,-14,8,-3,''],['p',82,42,18,6,-2,''],['p',79,7,-10,9,-4,''],['p',88,60,-22,7,-5,'longe'],['p',92,74,15,8,-2,'perto'],
+  ['m',44,8,6,8,-6,'longe'],['p',56,6,-6,8,-3,'longe']
+];
+
+function cenaBase(){
+  var h = '';
+  h += '<div class="estandarte esq">' + EMBLEMA['Magic'] + '</div>';
+  h += '<div class="estandarte dir">' + EMBLEMA['Pokémon'] + '</div>';
+  for (var i = 0; i < CARTINHAS.length; i++) {
+    var c = CARTINHAS[i];
+    h += '<div class="cartinha ' + c[0] + ' ' + c[6] + '" style="left:' + c[1] + '%;top:' + c[2] + '%;--r:' + c[3] + 'deg;--d:' + c[4] + 's;--a:' + c[5] + 's">' +
+         EMBLEMA[c[0] === 'm' ? 'Magic' : 'Pokémon'] + '</div>';
+  }
+  h += '<div class="brilho-livro"></div><div class="livro">' + LIVRO_SVG + '</div>';
+  return h;
+}
+function orbesHTML(){
+  var h = '';
+  for (var j in JOGOS) {
+    h += '<button class="orbe ' + JOGOS[j].cls + '" data-jogo="' + esc(j) + '" aria-label="' + esc(j) + '">' +
+         '<span class="anel a3"></span><span class="anel a2"></span>' +
+         '<span class="nucleo">' + EMBLEMA[j] + (j === 'Pokémon' ? '<i></i>' : '') + '</span>' +
+         '<span class="anel a1"></span>' +
+         '<b>' + esc(j) + '</b></button>';
+  }
+  return h;
+}
+function universo(){
+  document.body.removeAttribute('data-tema');
+  $('titulo').textContent = 'Grimório';
+  $('cena').classList.remove('modo-colecoes');
+  $('btVoltarOrn').style.display = 'none';
+  $('nomeOrn').textContent = 'Grimório';
+  $('subOrn').textContent = 'Escolha o universo';
+  $('orbes').innerHTML = cenaBase() + orbesHTML();
+  mostrar('universo');
+}
+
+/* ===== TELA 2 ===== */
+/* fotos dos pacotes (links de compartilhamento do Google Drive) */
+var FOTOS_PACOTE = {
+  fra:  'https://drive.google.com/file/d/1p8ZmOFE7OO8vyGmp6G2RY0KQq772K0iA/view?usp=drive_link',
+  hob:  'https://drive.google.com/file/d/1Md5fumIxYNIlO4FYMS8qncdJFCA5N3OQ/view?usp=drive_link',
+  msh:  'https://drive.google.com/file/d/1Wuk3Pq_Gw3hmo_sATX-CLxUmq884GxG5/view?usp=drive_link',
+  '30th': 'https://drive.google.com/file/d/189f53aqtQPREFNIsXokYrJoZT1TGnt9K/view?usp=drive_link',
+  spm:  'https://drive.google.com/file/d/1RHw6awnsFep5dyAqSd7X83ntXsmJuAvJ/view?usp=drive_link',
+  tdm:  'https://drive.google.com/file/d/1yesg3UJ4MeLapB5173lflJf12VmvSAP4/view?usp=drive_link'
+};
+function idDrive(l){
+  if (!l) return '';
+  var m = l.match(/\/d\/([A-Za-z0-9_-]{20,})/) || l.match(/[?&]id=([A-Za-z0-9_-]{20,})/);
+  return m ? m[1] : '';
+}
+var fotoCache = {};
+function carregarFotos(){
+  var imgs = document.querySelectorAll('img.fotoPac[data-id]');
+  for (var i = 0; i < imgs.length; i++) (function(img){
+    var id = img.getAttribute('data-id');
+    if (fotoCache[id]) { img.src = fotoCache[id]; img.classList.add('ok'); return; }
+    google.script.run
+      .withSuccessHandler(function(d){ fotoCache[id] = d; img.src = d; img.classList.add('ok'); })
+      .withFailureHandler(function(){ img.closest('.pacote').classList.add('falhou'); })
+      .fotoPacote(id);
+  })(imgs[i]);
+}
+var CORES_SET = {
+  hob:['#3f7d2a','#1b3a12'], msh:['#d8a400','#4a2a00'], spm:['#d61f2c','#1a2a7a'], spe:['#8a1420','#101a4a'],
+  tdm:['#7a1fa8','#c2410c'], fra:['#1e5bd8','#0a1f5c'], '30th':['#e0b020','#5a3a00'], '30th-c':['#9aa4b0','#2a2f38'],
+  me06:['#1f8f5a','#0b2a3a'], dex251:['#d62828','#f6f6f6']
+};
+function colecoes(j){
+  jogoAtual = j;
+  document.body.setAttribute('data-tema', JOGOS[j].tema);
+  $('titulo').textContent = j + ' — Coleções';
+  $('cena').classList.add('modo-colecoes');
+  $('btVoltarOrn').style.display = '';
+  $('nomeOrn').textContent = j;
+  $('subOrn').textContent = 'Escolha a coleção';
+  mostrar('colecoes');
+  if (setsCache) { desenharSets(); return; }
+  $('orbes').innerHTML = cenaBase() + '<div class="vazio-cena">Abrindo o grimório…</div>';
+  google.script.run
+    .withSuccessHandler(function(r){ setsCache = r; desenharSets(); })
+    .withFailureHandler(function(e){ $('orbes').innerHTML = cenaBase() + '<div class="vazio-cena">Erro: ' + esc(e.message) + '</div>'; })
+    .listarSets();
+}
+
+function iconeSet(s){
+  if (s.jogo === 'Magic') {
+    return '<img class="inv" src="https://svgs.scryfall.io/sets/' + esc(s.set) + '.svg" alt="">';
+  }
+  if (s.icone) {
+    return '<img src="' + esc(s.icone) + '" alt="">';
+  }
+  return EMBLEMA_SET;
+}
+function iconeGenerico(){
+  var d = document.createElement('span');
+  d.innerHTML = EMBLEMA_SET;
+  return d.firstElementChild;
+}
+
+function desenharSets(){
+  var lista = setsCache.filter(function(s){ return s.jogo === jogoAtual; });
+  var h = cenaBase();
+  if (!lista.length) { $('orbes').innerHTML = h + '<div class="vazio-cena">Nenhuma coleção importada para este universo.</div>'; return; }
+  h += '<div class="anel-g b"></div><div class="anel-g"></div><div class="anel-g c"></div>';
+  var n = lista.length, passo = Math.min(15, 76 / Math.max(n, 1));
+  h += '<div class="pacotes-mob">';
+  lista.forEach(function(s, i){
+    var pct = s.fa ? Math.round(100 * s.faTenho / s.fa) : 0;
+    var k = i - (n - 1) / 2;
+    var cor = CORES_SET[s.set] || ['#8a6a2a','#2a1a08'];
+    var x = (k * passo) + 'vw';
+    var y = (11 + Math.abs(k) * 4) + '%';
+    var r = (k * 7) + 'deg';
+    var foto = idDrive(FOTOS_PACOTE[s.set]);
+    if (foto) {
+      h += '<button class="pacote foto" data-set="' + esc(s.set) + '" data-nome="' + esc(s.nome) + '" style="--x:' + x + ';--y:' + y + ';--r:' + r + ';--c1:' + cor[0] + ';--c2:' + cor[1] + '">' +
+        '<img class="fotoPac" data-id="' + esc(foto) + '" alt="">' +
+        '<span class="faixa"><b>' + esc(s.nome) + '</b><i>' + s.faTenho + ' / ' + s.fa + ' arte inteira · ' + s.tenho + ' / ' + s.total + '</i>' +
+        '<span class="barra"><em style="width:' + pct + '%"></em></span></span>' +
+      '</button>';
+      return;
+    }
+    h += '<button class="pacote" data-set="' + esc(s.set) + '" data-nome="' + esc(s.nome) + '" style="--x:' + x + ';--y:' + y + ';--r:' + r + ';--c1:' + cor[0] + ';--c2:' + cor[1] + '">' +
+      '<span class="crimpa t"></span>' +
+      '<span class="ic">' + iconeSet(s) + '</span>' +
+      '<span class="sel">' + esc(s.set) + '</span>' +
+      '<span class="arte">' + (s.capa ? '<img loading="lazy" src="' + esc(s.capa) + '" alt="">' : '') + '</span>' +
+      '<span class="faixa"><b>' + esc(s.nome) + '</b><i>' + s.faTenho + ' / ' + s.fa + ' arte inteira · ' + s.tenho + ' / ' + s.total + '</i>' +
+      '<span class="barra"><em style="width:' + pct + '%"></em></span></span>' +
+      '<span class="crimpa b"></span>' +
+    '</button>';
+  });
+  h += '</div>';
+  $('orbes').innerHTML = h;
+  carregarFotos();
+  var imgs = document.querySelectorAll('.pacote .ic img');
+  for (var i = 0; i < imgs.length; i++) {
+    imgs[i].addEventListener('error', function(){ this.replaceWith(iconeGenerico()); });
+  }
+}
+
+/* ===== TELA 3 ===== */
+function abrir(set, nome){
+  if (set === 'dex251') { abrirDex(); return; }
+  setAtual = set; nomeSetAtual = nome;
+  $('titulo').textContent = nome;
+  $('busca').value = '';
+  mostrar('cartas');
+  $('grade').innerHTML = '<div class="carregando">Invocando as cartas…</div>';
+  $('contagem').textContent = '';
+  google.script.run
+    .withSuccessHandler(function(r){
+      cartas = r;
+      filtro = cartas.some(function(c){ return c.fa; }) ? 'fa' : 'todas';
+      desenhar();
+    })
+    .withFailureHandler(function(e){ $('grade').innerHTML = '<div class="vazio">Erro: ' + esc(e.message) + '</div>'; })
+    .carregarSet(set);
+}
+
+function filtrar(){
+  var q = $('busca').value.trim().toLowerCase();
+  return cartas.filter(function(c){
+    if (filtro === 'fa' && !c.fa) return false;
+    if (filtro === 'faltam' && c.e === 'tenho') return false;
+    if (filtro === 'tenho' && c.e !== 'tenho') return false;
+    if (filtro === 'quero' && c.e !== 'quero') return false;
+    if (filtro === 'troco' && c.e !== 'troco') return false;
+    if (q && !(String(c.nome).toLowerCase().indexOf(q) >= 0 || String(c.n).toLowerCase().indexOf(q) >= 0)) return false;
+    return true;
+  });
+}
+
+function cartaHTML(c){
+  var est = c.e ? '<span class="est" style="background:var(--' + (c.e === 'tenho' ? 'ok' : c.e) + ')">' + c.e.toUpperCase() + '</span>' : '';
+  var preco = c.p ? '<div class="p">US$ ' + Number(c.p).toFixed(2) + '</div>' : '';
+  return '<div class="carta ' + esc(c.e) + '" data-k="' + esc(c.k) + '">' +
+    '<div class="img">' +
+      (c.img ? '<img loading="lazy" src="' + esc(c.img) + '" alt="">' : '') +
+      (c.fa ? '<span class="fa">ARTE INTEIRA</span>' : '') + est +
+    '</div>' +
+    '<div class="info">' +
+      '<div class="n">#' + esc(c.n) + ' · ' + esc(c.r) + '</div>' +
+      '<div>' + esc(c.nome) + '</div>' + preco +
+    '</div>' +
+    '<div class="acoes">' +
+      '<button class="t ' + (c.e === 'tenho' ? 'on' : '') + '" data-e="tenho">Tenho</button>' +
+      '<button class="q ' + (c.e === 'quero' ? 'on' : '') + '" data-e="quero">Quero</button>' +
+      '<button class="x ' + (c.e === 'troco' ? 'on' : '') + '" data-e="troco">Troco</button>' +
+    '</div>' +
+  '</div>';
+}
+
+function desenhar(){
+  var bs = document.querySelectorAll('#filtros button');
+  for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-f') === filtro);
+  var lista = filtrar();
+  $('grade').innerHTML = lista.length ? lista.map(cartaHTML).join('') : '<div class="vazio">Nada aqui.</div>';
+  atualizarContagem();
+}
+
+function atualizarContagem(){
+  var fa = cartas.filter(function(c){ return c.fa; });
+  var faT = fa.filter(function(c){ return c.e === 'tenho'; }).length;
+  var tot = cartas.filter(function(c){ return c.e === 'tenho'; }).length;
+  var q = cartas.filter(function(c){ return c.e === 'quero'; }).length;
+  var x = cartas.filter(function(c){ return c.e === 'troco'; }).length;
+  $('contagem').textContent = 'Arte inteira: ' + faT + '/' + fa.length + ' · Total: ' + tot + '/' + cartas.length +
+    ' · Quero: ' + q + ' · Troco: ' + x + ' · Exibindo: ' + filtrar().length;
+  if (setsCache) {
+    for (var i = 0; i < setsCache.length; i++) {
+      if (setsCache[i].set === setAtual) { setsCache[i].tenho = tot; setsCache[i].faTenho = faT; }
+    }
+  }
+}
+
+function marcar(k, estado){
+  var c = null;
+  for (var i = 0; i < cartas.length; i++) if (cartas[i].k === k) { c = cartas[i]; break; }
+  if (!c) return;
+  var novo = c.e === estado ? '' : estado;
+  var antigo = c.e;
+  c.e = novo;
+  var el = null, els = document.querySelectorAll('.carta');
+  for (var j = 0; j < els.length; j++) if (els[j].getAttribute('data-k') === k) { el = els[j]; break; }
+  if (el) el.outerHTML = cartaHTML(c);
+  atualizarContagem();
+  google.script.run
+    .withFailureHandler(function(e){ c.e = antigo; desenhar(); alert('Não salvou: ' + e.message); })
+    .marcar(k, novo);
+}
+
+/* ===== TELA 5: BALCÃO ===== */
+var balJogo = 'Magic';
+var carrinho = [];
+var itemAtual = null;
+var buscaTimer = null;
+
+function abrirBalcao(){
+  $('titulo').textContent = 'Balcão';
+  mostrar('balcao');
+  setTimeout(function(){ $('nomeManual').focus(); }, 50);
+}
+function ligaUrl(nome){
+  return balJogo === 'Magic'
+    ? 'https://www.ligamagic.com.br/?view=cards/card&card=' + encodeURIComponent(nome)
+    : 'https://www.ligapokemon.com.br/?view=cards/card&card=' + encodeURIComponent(nome);
+}
+function statusBal(t){ $('ocrStatus').textContent = t || ''; }
+function dinheiro(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
+function lerPreco(s){ s = String(s || '').replace(/[^0-9,\.]/g, '').replace(',', '.'); var v = parseFloat(s); return isNaN(v) ? 0 : v; }
+
+/* --- foto → OCR --- */
+function carregarImagem(file){
+  return new Promise(function(res, rej){
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){ res(img); }; img.onerror = rej; img.src = url;
+  });
+}
+function recortarTopo(img){
+  var W = Math.min(1400, img.naturalWidth), esc_ = W / img.naturalWidth, H = Math.round(img.naturalHeight * esc_);
+  var cv = document.createElement('canvas'); cv.width = W; cv.height = Math.round(H * 0.22);
+  var ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight * 0.22, 0, 0, W, cv.height);
+  /* cinza + contraste */
+  var d = ctx.getImageData(0, 0, cv.width, cv.height), p = d.data;
+  for (var i = 0; i < p.length; i += 4) {
+    var g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+    g = (g - 128) * 1.6 + 128; g = g < 0 ? 0 : g > 255 ? 255 : g;
+    p[i] = p[i + 1] = p[i + 2] = g;
+  }
+  ctx.putImageData(d, 0, 0);
+  return cv;
+}
+function limparTextoOCR(t){
+  var linhas = t.split('\n').map(function(l){ return l.replace(/[^A-Za-zÀ-ÿ' \-]/g, ' ').replace(/\s+/g, ' ').trim(); })
+    .filter(function(l){ return l.replace(/[^A-Za-zÀ-ÿ]/g, '').length >= 3; });
+  var ruido = /^(basic|stage|evolves|from|hp|creature|instant|sorcery|enchantment|artifact|land|legendary|planeswalker|pok[eé]mon|ex|v|gx|the|of)$/i;
+  linhas = linhas.map(function(l){ return l.split(' ').filter(function(w){ return w.length > 1 && !ruido.test(w); }).join(' ').trim(); })
+    .filter(function(l){ return l.length >= 3; });
+  linhas.sort(function(a, b){ return b.length - a.length; });
+  return linhas[0] || '';
+}
+function escanear(file){
+  if (!file) return;
+  $('sugestoes').innerHTML = '';
+  carregarImagem(file).then(function(img){
+    var cv = recortarTopo(img);
+    var pv = $('previa'); pv.src = cv.toDataURL('image/jpeg', 0.7); pv.style.display = 'block';
+    if (typeof Tesseract === 'undefined') { statusBal('Leitor de texto não carregou. Digite o nome.'); return; }
+    statusBal('Lendo a carta…');
+    return Tesseract.recognize(cv, 'eng', {logger: function(m){ if (m.status === 'recognizing text') statusBal('Lendo… ' + Math.round(m.progress * 100) + '%'); }})
+      .then(function(r){
+        var nome = limparTextoOCR(r.data.text || '');
+        if (!nome) { statusBal('Não consegui ler o nome. Tente outra foto ou digite.'); return; }
+        statusBal('Li: "' + nome + '". Escolha abaixo ou corrija o texto.');
+        $('nomeManual').value = nome;
+        buscarNomes(nome);
+      });
+  }).catch(function(e){ statusBal('Erro ao ler a foto: ' + (e && e.message ? e.message : e)); });
+}
+
+/* --- busca de nomes (Scryfall / TCGdex) --- */
+function buscarNomes(q){
+  q = (q || '').trim();
+  if (q.length < 3) { $('sugestoes').innerHTML = ''; return; }
+  var box = $('sugestoes');
+  box.innerHTML = '<span class="status">buscando…</span>';
+  var url = balJogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(q)
+    : 'https://api.tcgdex.net/v2/en/cards?name=like:' + encodeURIComponent(q);
+  fetch(url).then(function(r){ return r.json(); }).then(function(j){
+    var nomes = [];
+    if (balJogo === 'Magic') nomes = j.data || [];
+    else { var v = {}; (Array.isArray(j) ? j : []).forEach(function(c){ if (c.name && !v[c.name]) { v[c.name] = 1; nomes.push(c.name); } }); }
+    nomes = nomes.slice(0, 12);
+    if (!nomes.length && balJogo === 'Magic') {
+      return fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(q)).then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(c){ desenharSugestoes(c && c.name ? [c.name] : [], q); });
+    }
+    desenharSugestoes(nomes, q);
+  }).catch(function(){ desenharSugestoes([], q); });
+}
+function desenharSugestoes(nomes, q){
+  var h = '';
+  nomes.forEach(function(n){ h += '<button data-nome="' + esc(n) + '">' + esc(n) + '</button>'; });
+  h += '<button data-nome="' + esc(q) + '" data-livre="1">Usar "' + esc(q) + '" mesmo assim</button>';
+  $('sugestoes').innerHTML = h;
+}
+
+/* --- item em edição --- */
+function escolherNome(nome){
+  itemAtual = {nome: nome, img: '', edicao: '', preco: 0, qtd: 1};
+  desenharItem();
+  var url = balJogo === 'Magic'
+    ? 'https://api.scryfall.com/cards/named?exact=' + encodeURIComponent(nome)
+    : 'https://api.tcgdex.net/v2/en/cards?name=' + encodeURIComponent(nome);
+  fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
+    if (!itemAtual || itemAtual.nome !== nome || !j) return;
+    if (balJogo === 'Magic') { itemAtual.img = j.image_uris ? j.image_uris.normal : (j.card_faces && j.card_faces[0].image_uris ? j.card_faces[0].image_uris.normal : ''); itemAtual.edicao = (j.set_name || '') + (j.prices && j.prices.usd ? ' · ref. US$ ' + j.prices.usd : ''); }
+    else { var c = Array.isArray(j) ? j[0] : null; if (c && c.image) itemAtual.img = c.image + '/high.webp'; itemAtual.edicao = Array.isArray(j) ? j.length + ' impressões conhecidas' : ''; }
+    desenharItem(true);
+  }).catch(function(){});
+}
+function desenharItem(soImagem){
+  var box = $('itemEdit');
+  if (!itemAtual) { box.innerHTML = ''; return; }
+  if (soImagem && $('imgItem')) { if (itemAtual.img) $('imgItem').src = itemAtual.img; $('edItem').textContent = itemAtual.edicao; return; }
+  box.innerHTML = '<div class="item-edit">' +
+    '<img id="imgItem" src="' + esc(itemAtual.img) + '" alt="" style="' + (itemAtual.img ? '' : 'visibility:hidden') + '">' +
+    '<div class="campos"><b>' + esc(itemAtual.nome) + '</b><span class="edicao" id="edItem">' + esc(itemAtual.edicao) + '</span>' +
+    '<a class="liga ' + (balJogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrl(itemAtual.nome)) + '" target="_blank" rel="noopener">Ver preço na ' + (balJogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + ' ↗</a>' +
+    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="decimal" placeholder="0,00"><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
+    '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div></div></div>';
+  setTimeout(function(){ $('precoItem').focus(); }, 50);
+}
+function adicionarItem(){
+  if (!itemAtual) return;
+  var p = lerPreco($('precoItem').value), q = parseInt($('qtdItem').value, 10) || 1;
+  carrinho.push({nome: itemAtual.nome, jogo: balJogo, preco: p, qtd: q});
+  itemAtual = null; desenharItem(); $('sugestoes').innerHTML = ''; $('nomeManual').value = ''; statusBal('');
+  var pv = $('previa'); pv.style.display = 'none';
+  desenharCarrinho();
+}
+function desenharCarrinho(){
+  var h = '', tot = 0;
+  carrinho.forEach(function(it, i){
+    var sub = it.preco * it.qtd; tot += sub;
+    h += '<div class="it"><span class="nm">' + esc(it.nome) + (it.qtd > 1 ? ' ×' + it.qtd : '') + '</span><span class="vl">' + dinheiro(sub) + '</span><button class="rm" data-i="' + i + '" title="remover">✕</button></div>';
+  });
+  $('itens').innerHTML = h || '<div class="status">Nada ainda.</div>';
+  $('totalBal').textContent = dinheiro(tot);
+}
+function copiarCarrinho(){
+  var tot = 0, linhas = carrinho.map(function(it){ var s = it.preco * it.qtd; tot += s; return it.nome + (it.qtd > 1 ? ' x' + it.qtd : '') + ' — ' + dinheiro(s); });
+  linhas.push('TOTAL — ' + dinheiro(tot));
+  var txt = linhas.join('\n');
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ statusBal('Lista copiada.'); });
+  else { window.prompt('Copie:', txt); }
+}
+
+/* ===== TELA 4: POKÉDEX 251 ===== */
+var DEX_NOMES = ["Bulbasaur", "Ivysaur", "Venusaur", "Charmander", "Charmeleon", "Charizard", "Squirtle", "Wartortle", "Blastoise", "Caterpie", "Metapod", "Butterfree", "Weedle", "Kakuna", "Beedrill", "Pidgey", "Pidgeotto", "Pidgeot", "Rattata", "Raticate", "Spearow", "Fearow", "Ekans", "Arbok", "Pikachu", "Raichu", "Sandshrew", "Sandslash", "Nidoran♀", "Nidorina", "Nidoqueen", "Nidoran♂", "Nidorino", "Nidoking", "Clefairy", "Clefable", "Vulpix", "Ninetales", "Jigglypuff", "Wigglytuff", "Zubat", "Golbat", "Oddish", "Gloom", "Vileplume", "Paras", "Parasect", "Venonat", "Venomoth", "Diglett", "Dugtrio", "Meowth", "Persian", "Psyduck", "Golduck", "Mankey", "Primeape", "Growlithe", "Arcanine", "Poliwag", "Poliwhirl", "Poliwrath", "Abra", "Kadabra", "Alakazam", "Machop", "Machoke", "Machamp", "Bellsprout", "Weepinbell", "Victreebel", "Tentacool", "Tentacruel", "Geodude", "Graveler", "Golem", "Ponyta", "Rapidash", "Slowpoke", "Slowbro", "Magnemite", "Magneton", "Farfetch'd", "Doduo", "Dodrio", "Seel", "Dewgong", "Grimer", "Muk", "Shellder", "Cloyster", "Gastly", "Haunter", "Gengar", "Onix", "Drowzee", "Hypno", "Krabby", "Kingler", "Voltorb", "Electrode", "Exeggcute", "Exeggutor", "Cubone", "Marowak", "Hitmonlee", "Hitmonchan", "Lickitung", "Koffing", "Weezing", "Rhyhorn", "Rhydon", "Chansey", "Tangela", "Kangaskhan", "Horsea", "Seadra", "Goldeen", "Seaking", "Staryu", "Starmie", "Mr. Mime", "Scyther", "Jynx", "Electabuzz", "Magmar", "Pinsir", "Tauros", "Magikarp", "Gyarados", "Lapras", "Ditto", "Eevee", "Vaporeon", "Jolteon", "Flareon", "Porygon", "Omanyte", "Omastar", "Kabuto", "Kabutops", "Aerodactyl", "Snorlax", "Articuno", "Zapdos", "Moltres", "Dratini", "Dragonair", "Dragonite", "Mewtwo", "Mew", "Chikorita", "Bayleef", "Meganium", "Cyndaquil", "Quilava", "Typhlosion", "Totodile", "Croconaw", "Feraligatr", "Sentret", "Furret", "Hoothoot", "Noctowl", "Ledyba", "Ledian", "Spinarak", "Ariados", "Crobat", "Chinchou", "Lanturn", "Pichu", "Cleffa", "Igglybuff", "Togepi", "Togetic", "Natu", "Xatu", "Mareep", "Flaaffy", "Ampharos", "Bellossom", "Marill", "Azumarill", "Sudowoodo", "Politoed", "Hoppip", "Skiploom", "Jumpluff", "Aipom", "Sunkern", "Sunflora", "Yanma", "Wooper", "Quagsire", "Espeon", "Umbreon", "Murkrow", "Slowking", "Misdreavus", "Unown", "Wobbuffet", "Girafarig", "Pineco", "Forretress", "Dunsparce", "Gligar", "Steelix", "Snubbull", "Granbull", "Qwilfish", "Scizor", "Shuckle", "Heracross", "Sneasel", "Teddiursa", "Ursaring", "Slugma", "Magcargo", "Swinub", "Piloswine", "Corsola", "Remoraid", "Octillery", "Delibird", "Mantine", "Skarmory", "Houndour", "Houndoom", "Kingdra", "Phanpy", "Donphan", "Porygon2", "Stantler", "Smeargle", "Tyrogue", "Hitmontop", "Smoochum", "Elekid", "Magby", "Miltank", "Blissey", "Raikou", "Entei", "Suicune", "Larvitar", "Pupitar", "Tyranitar", "Lugia", "Ho-Oh", "Celebi"];
+var dexCartas = [];
+var filtroDex = 'todos';
+var dexAberto = 0;
+
+function abrirDex(){
+  setAtual = 'dex251'; nomeSetAtual = 'Pokédex 251 — Arte inteira';
+  $('titulo').textContent = nomeSetAtual;
+  $('buscaDex').value = '';
+  mostrar('dex');
+  $('gradeDex').innerHTML = '<div class="carregando">Abrindo a Pokédex…</div>';
+  $('contagemDex').textContent = '';
+  google.script.run
+    .withSuccessHandler(function(r){ dexCartas = r; desenharDex(); })
+    .withFailureHandler(function(e){ $('gradeDex').innerHTML = '<div class="vazio">Erro: ' + esc(e.message) + '</div>'; })
+    .carregarDex();
+}
+function cartasDoSlot(n){ return dexCartas.filter(function(c){ return c.dex === n; }); }
+function estadoSlot(cs){
+  var t = false, q = false;
+  for (var i = 0; i < cs.length; i++) { if (cs[i].e === 'tenho') t = true; if (cs[i].e === 'quero') q = true; }
+  return t ? 'tenho' : (q ? 'quero' : '');
+}
+function pad3(n){ return (n < 10 ? '00' : n < 100 ? '0' : '') + n; }
+function desenharDex(){
+  var bs = document.querySelectorAll('#filtrosDex button');
+  for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].getAttribute('data-f') === filtroDex);
+  var q = $('buscaDex').value.trim().toLowerCase();
+  var h = '', tenho = 0, quero = 0, sem = 0, exib = 0;
+  for (var n = 1; n <= 251; n++) {
+    var cs = cartasDoSlot(n), est = estadoSlot(cs), nome = DEX_NOMES[n - 1];
+    if (est === 'tenho') tenho++; else if (est === 'quero') quero++;
+    if (!cs.length) sem++;
+    if (filtroDex === 'faltam' && est === 'tenho') continue;
+    if (filtroDex === 'tenho' && est !== 'tenho') continue;
+    if (filtroDex === 'quero' && est !== 'quero') continue;
+    if (filtroDex === 'sem' && cs.length) continue;
+    if (q && !(nome.toLowerCase().indexOf(q) >= 0 || String(n).indexOf(q) >= 0 || pad3(n).indexOf(q) >= 0)) continue;
+    exib++;
+    var img = '';
+    for (var j = 0; j < cs.length; j++) if (cs[j].e === 'tenho' && cs[j].img) { img = cs[j].img; break; }
+    if (!img) for (var j2 = 0; j2 < cs.length; j2++) if (cs[j2].img) { img = cs[j2].img; break; }
+    var badge = est ? '<span class="est" style="background:var(--' + (est === 'tenho' ? 'ok' : 'quero') + ')">' + est.toUpperCase() + '</span>' : '';
+    h += '<div class="slot ' + est + (cs.length ? '' : ' sem-carta') + '" data-dex="' + n + '" role="button" tabindex="0">' +
+      '<div class="img">' + (img ? '<img loading="lazy" src="' + esc(img) + '" alt="">' : '#' + pad3(n)) +
+      (cs.length ? '<span class="qtd">' + cs.length + ' opç' + (cs.length > 1 ? 'ões' : 'ão') + '</span>' : '') + badge + '</div>' +
+      '<div class="info"><div class="n">#' + pad3(n) + '</div><div>' + esc(nome) + '</div></div></div>';
+  }
+  $('gradeDex').innerHTML = h || '<div class="vazio">Nada aqui.</div>';
+  $('contagemDex').textContent = 'Pokédex: ' + tenho + ' / 251 · Quero: ' + quero + ' · Sem carta conhecida: ' + sem + ' · Exibindo: ' + exib;
+  if (setsCache) for (var s = 0; s < setsCache.length; s++) if (setsCache[s].set === 'dex251') { setsCache[s].tenho = tenho; setsCache[s].faTenho = tenho; }
+}
+function abrirSlot(n){
+  dexAberto = n;
+  var cs = cartasDoSlot(n);
+  var h = '<div class="modal" id="modalDex"><div class="caixa"><div class="cab"><h2>#' + pad3(n) + ' ' + esc(DEX_NOMES[n - 1]) + '</h2><button class="fechar" id="fecharDex">Fechar ✕</button></div>';
+  if (!cs.length) h += '<div class="nada">Nenhuma carta de arte inteira conhecida para este Pokémon na TCGdex. Quando sair, rode importarDex de novo.</div>';
+  else {
+    h += '<div class="cands">';
+    cs.forEach(function(c){
+      h += '<div class="carta ' + esc(c.e) + '" data-k="' + esc(c.k) + '">' +
+        '<div class="img">' + (c.img ? '<img loading="lazy" src="' + esc(c.img) + '" alt="">' : '') +
+        (c.e ? '<span class="est" style="background:var(--' + (c.e === 'tenho' ? 'ok' : c.e) + ')">' + c.e.toUpperCase() + '</span>' : '') + '</div>' +
+        '<div class="info"><div class="n">' + esc(c.set).toUpperCase() + ' · ' + esc(c.tipo) + '</div><div>' + esc(c.nome) + '</div></div>' +
+        '<div class="acoes">' +
+          '<button class="t ' + (c.e === 'tenho' ? 'on' : '') + '" data-e="tenho">Tenho</button>' +
+          '<button class="q ' + (c.e === 'quero' ? 'on' : '') + '" data-e="quero">Quero</button>' +
+        '</div></div>';
+    });
+    h += '</div>';
+  }
+  h += '</div></div>';
+  var d = document.createElement('div'); d.innerHTML = h; document.body.appendChild(d.firstElementChild);
+}
+function fecharSlot(){ var m = $('modalDex'); if (m) m.remove(); desenharDex(); }
+function marcarDex(k, estado){
+  var c = null;
+  for (var i = 0; i < dexCartas.length; i++) if (dexCartas[i].k === k) { c = dexCartas[i]; break; }
+  if (!c) return;
+  var novo = c.e === estado ? '' : estado, antigo = c.e;
+  c.e = novo;
+  var m = $('modalDex'); if (m) { m.remove(); abrirSlot(dexAberto); }
+  google.script.run
+    .withFailureHandler(function(e){ c.e = antigo; fecharSlot(); abrirSlot(dexAberto); alert('Não salvou: ' + e.message); })
+    .marcar(k, novo);
+}
+
+/* ===== EVENTOS ===== */
+document.addEventListener('click', function(ev){
+  var orb = ev.target.closest('.orbe');
+  if (orb) { colecoes(orb.getAttribute('data-jogo')); return; }
+  var set = ev.target.closest('.pacote');
+  if (set) { abrir(set.getAttribute('data-set'), set.getAttribute('data-nome')); return; }
+  var v = ev.target.closest('.voltar, .voltar-orn');
+  if (v) { if (v.getAttribute('data-ir') === 'universo') universo(); else colecoes(jogoAtual); return; }
+  var f = ev.target.closest('#filtros button');
+  if (f) { filtro = f.getAttribute('data-f'); desenhar(); return; }
+  var fd = ev.target.closest('#filtrosDex button');
+  if (fd) { filtroDex = fd.getAttribute('data-f'); desenharDex(); return; }
+  if (ev.target.closest('#fecharDex')) { fecharSlot(); return; }
+  var md = ev.target.closest('#modalDex');
+  if (md) {
+    var ad = ev.target.closest('.carta .acoes button');
+    if (ad) marcarDex(ad.closest('.carta').getAttribute('data-k'), ad.getAttribute('data-e'));
+    else if (ev.target === md) fecharSlot();
+    return;
+  }
+  var sl = ev.target.closest('.slot');
+  if (sl) { abrirSlot(Number(sl.getAttribute('data-dex'))); return; }
+  if (ev.target.closest('#btBalcao')) { abrirBalcao(); return; }
+  var js = ev.target.closest('#jogoSel button');
+  if (js) { balJogo = js.getAttribute('data-j'); var bs2 = document.querySelectorAll('#jogoSel button'); for (var b2 = 0; b2 < bs2.length; b2++) bs2[b2].classList.toggle('on', bs2[b2] === js); itemAtual = null; desenharItem(); buscarNomes($('nomeManual').value); return; }
+  var sg = ev.target.closest('#sugestoes button');
+  if (sg) { escolherNome(sg.getAttribute('data-nome')); return; }
+  if (ev.target.closest('#addItem')) { adicionarItem(); return; }
+  if (ev.target.closest('#cancItem')) { itemAtual = null; desenharItem(); return; }
+  var rm = ev.target.closest('.carrinho .rm');
+  if (rm) { carrinho.splice(Number(rm.getAttribute('data-i')), 1); desenharCarrinho(); return; }
+  if (ev.target.closest('#copiarBal')) { copiarCarrinho(); return; }
+  if (ev.target.closest('#limparBal')) { if (!carrinho.length || confirm('Limpar a lista?')) { carrinho = []; desenharCarrinho(); } return; }
+  var a = ev.target.closest('.carta .acoes button');
+  if (a) { marcar(a.closest('.carta').getAttribute('data-k'), a.getAttribute('data-e')); return; }
+});
+$('busca').addEventListener('input', desenhar);
+$('buscaDex').addEventListener('input', desenharDex);
+$('fotoCarta').addEventListener('change', function(){ escanear(this.files && this.files[0]); this.value = ''; });
+$('nomeManual').addEventListener('input', function(){ clearTimeout(buscaTimer); var v = this.value; buscaTimer = setTimeout(function(){ buscarNomes(v); }, 350); });
+document.addEventListener('keydown', function(ev){
+  if (ev.key === 'Enter' && ev.target && ev.target.id === 'precoItem') adicionarItem();
+  if (ev.key === 'Enter' && ev.target && ev.target.id === 'nomeManual') { var b = document.querySelector('#sugestoes button'); if (b) escolherNome(b.getAttribute('data-nome')); }
+});
+
+/* ===== PARTÍCULAS ===== */
+(function(){
+  var cv = $('particulas'), ctx = cv.getContext('2d');
+  var W, H, pts = [];
+  function tam(){ W = cv.width = cv.offsetWidth; H = cv.height = cv.offsetHeight; }
+  function novo(){
+    var magic = Math.random() < .5;
+    return {x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+.6,
+            vx:(Math.random()-.5)*.25, vy:-(Math.random()*.35+.1),
+            cor: magic ? 'rgba(255,' + (140+Math.random()*80|0) + ',40,' : 'rgba(' + (60+Math.random()*60|0) + ',170,255,',
+            a:Math.random()};
+  }
+  function loop(){
+    if (!$('universo').classList.contains('ativa')) { requestAnimationFrame(loop); return; }
+    ctx.clearRect(0,0,W,H);
+    for (var i = 0; i < pts.length; i++) {
+      var p = pts[i];
+      p.x += p.vx; p.y += p.vy; p.a += .01;
+      if (p.y < -5 || p.x < -5 || p.x > W+5) { var n = novo(); n.y = H+5; pts[i] = n; p = n; }
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = p.cor + (0.3 + 0.5*Math.abs(Math.sin(p.a))) + ')'; ctx.fill();
+    }
+    requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize', tam);
+  tam(); for (var i = 0; i < 90; i++) pts.push(novo()); loop();
+})();
+
+universo();
+</script>
+</body>
+</html>
