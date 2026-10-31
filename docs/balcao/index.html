@@ -131,7 +131,7 @@ var ultimaBusca = '';
 function $(id){ return document.getElementById(id); }
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 function dinheiro(v){ return 'R$ ' + v.toFixed(2).replace('.', ','); }
-function lerPreco(s){ s = String(s || '').replace(/[^0-9,\.]/g, '').replace(',', '.'); var v = parseFloat(s); return isNaN(v) ? 0 : v; }
+function lerPreco(s){ s = String(s || '').replace(/[^0-9,\.]/g, ''); if (s.indexOf(',') >= 0) s = s.replace(/\./g, '').replace(',', '.'); var v = parseFloat(s); return isNaN(v) ? 0 : v; }
 function status(t){ $('status').textContent = t || ''; }
 function toast(t){ var e = $('toast'); e.textContent = t; e.classList.add('on'); setTimeout(function(){ e.classList.remove('on'); }, 1800); }
 function ligaUrl(nome){
@@ -354,6 +354,14 @@ function aplicarRef(v, txt){
   if (!inp.value) inp.value = v.toFixed(2).replace('.', ',');
   var r = $('refItem'); if (r) r.textContent = 'ref. ' + dinheiro(v) + (txt ? ' (' + txt + ' × câmbio do dia)' : '');
 }
+/* máscara de dinheiro estilo maquininha: só digitos, centavos entram pela direita (1250 → 12,50) */
+function mascaraDinheiro(inp){
+  var d = String(inp.value || '').replace(/\D/g, '').replace(/^0+/, '');
+  if (!d) { inp.value = ''; return; }
+  if (d.length > 9) d = d.slice(0, 9);
+  while (d.length < 3) d = '0' + d;
+  inp.value = d.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d.slice(-2);
+}
 function colarPreco(){
   if (!navigator.clipboard || !navigator.clipboard.readText) { toast('Seu navegador não deixa colar automático'); return; }
   navigator.clipboard.readText().then(function(t){
@@ -375,7 +383,7 @@ function desenharItem(){
     '<img id="imgItem" src="' + esc(itemAtual.img) + '" alt="" style="' + (itemAtual.img ? '' : 'visibility:hidden') + '">' +
     '<div class="campos"><b>' + esc(itemAtual.nome) + '</b><span class="ed" id="edItem">' + esc(itemAtual.ed) + '</span>' +
     '<a class="liga ' + (jogo === 'Magic' ? '' : 'pk') + '" href="' + esc(ligaUrl(itemAtual.nome)) + '" id="ligaBtn">Ver preço na ' + (jogo === 'Magic' ? 'LigaMagic' : 'LigaPokemon') + '</a>' +
-    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="decimal" placeholder="0,00"><button class="colar" id="colarItem" title="colar valor copiado da Liga">Colar</button><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
+    '<div class="preco"><span>R$</span><input id="precoItem" inputmode="numeric" placeholder="0,00" autocomplete="off"><button class="colar" id="colarItem" title="colar valor copiado da Liga">Colar</button><span>×</span><input class="qtd" id="qtdItem" inputmode="numeric" value="1">' +
     '<button class="add" id="addItem">Adicionar</button><button class="canc" id="cancItem">✕</button></div>' +
     '<span class="ed" id="refItem"></span></div></div>';
   $('item').scrollIntoView({behavior: 'smooth', block: 'center'});
@@ -432,6 +440,7 @@ document.addEventListener('click', function(ev){
 });
 $('foto').addEventListener('change', function(){ lerFoto(this.files && this.files[0]); this.value = ''; });
 $('nome').addEventListener('input', function(){ clearTimeout(buscaTimer); var v = this.value; buscaTimer = setTimeout(function(){ buscarNomes(v); }, 350); });
+document.addEventListener('input', function(ev){ if (ev.target && ev.target.id === 'precoItem') mascaraDinheiro(ev.target); });
 document.addEventListener('keydown', function(ev){
   if (ev.key === 'Enter' && ev.target.id === 'precoItem') adicionar();
   if (ev.key === 'Enter' && ev.target.id === 'nome') { var b = document.querySelector('#sugestoes button'); if (b) escolherNome(b.getAttribute('data-nome')); }
