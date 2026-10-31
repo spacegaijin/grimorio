@@ -289,6 +289,8 @@ function validarLinhas(linhas){
         if (nomes.length) {
           if (nomes[0] !== ultimoHit) {
             ultimoHit = nomes[0]; $('nome').value = l; desenharSugestoes(nomes, l, true);
+            if (similaridade(l, nomes[0]) < 0.85) status('Leitura imperfeita ("' + l + '") — a sugestão mais parecida vem primeiro.');
+            else status('');
             if (modo === 'inteira') tentarEdicaoExata(nomes[0], rodapeAtual);
           }
           res(true);
@@ -330,36 +332,82 @@ function testarLinhas(linhas){
 }
 
 /* ===== busca de nomes ===== */
-function consultarNomes(q){
+/* ---- busca tolerante a erro de leitura ---- */
+function similaridade(a, b){
+  a = a.toLowerCase(); b = b.toLowerCase();
+  if (a === b) return 1;
+  var m = a.length, n = b.length; if (!m || !n) return 0;
+  var prev = [], cur = [], i, j;
+  for (j = 0; j <= n; j++) prev[j] = j;
+  for (i = 1; i <= m; i++) { cur[0] = i; for (j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur.slice(); }
+  return 1 - prev[n] / Math.max(m, n);
+}
+function buscaCrua(q){
   var url = jogo === 'Magic'
     ? 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(q)
     : 'https://api.tcgdex.net/v2/en/cards?name=like:' + encodeURIComponent(q);
   return fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){
     if (!j) return [];
-    if (jogo === 'Magic') return (j.data || []).slice(0, 10);
+    if (jogo === 'Magic') return (j.data || []).slice(0, 20);
     var v = {}, out = []; (Array.isArray(j) ? j : []).forEach(function(c){ if (c.name && !v[c.name]) { v[c.name] = 1; out.push(c.name); } });
-    return out.slice(0, 10);
+    return out.slice(0, 20);
   }).catch(function(){ return []; });
 }
-function buscarNomes(q, daCamera){
-  q = (q || '').trim();
-  if (q.length < 3) { $('sugestoes').innerHTML = ''; return; }
-  if (q === ultimaBusca && !daCamera) return;
-  ultimaBusca = q;
-  consultarNomes(q).then(function(nomes){
-    if (!nomes.length && jogo === 'Magic') {
-      return fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(q)).then(function(r){ return r.ok ? r.json() : null; })
-        .then(function(c){ desenharSugestoes(c && c.name ? [c.name] : [], q, daCamera); });
+function buscaFuzzyMagic(q){
+  return fetch('https://api.scryfall.com/cards/named?fuzzy=' + encodeURIComponent(q)).then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(c){ return c && c.name ? [c.name] : []; }).catch(function(){ return []; });
+}
+/* catálogo completo de nomes, baixado uma vez e guardado no celular, para busca aproximada local */
+var catalogo = {Magic: null, 'Pokémon': null}, carregandoCat = {};
+function normalizar(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function getCatalogo(){
+  var j = jogo;
+  if (catalogo[j]) return Promise.resolve(catalogo[j]);
+  try { var s = localStorage.getItem('balcao-cat-' + j); if (s) { catalogo[j] = JSON.parse(s); return Promise.resolve(catalogo[j]); } } catch (e) {}
+  if (carregandoCat[j]) return carregandoCat[j];
+  status('Baixando lista de nomes (' + j + ') pela primeira vez…');
+  var url = j === 'Magic' ? 'https://api.scryfall.com/catalog/card-names' : 'https://api.tcgdex.net/v2/en/cards';
+  carregandoCat[j] = fetch(url).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+    var nomes = [];
+    if (j === 'Magic') nomes = (d && d.data) ? d.data : [];
+    else { var v = {}; (Array.isArray(d) ? d : []).forEach(function(c){ if (c.name && !v[c.name]) { v[c.name] = 1; nomes.push(c.name); } }); }
+    catalogo[j] = nomes.map(function(n){ return [n, normalizar(n)]; });
+    try { localStorage.setItem('balcao-cat-' + j, JSON.stringify(catalogo[j])); } catch (e) {}
+    status(''); return catalogo[j];
+  }).catch(function(){ status(''); return []; });
+  return carregandoCat[j];
+}
+function fuzzyLocal(q){
+  var nq = normalizar(q); if (nq.length < 3) return Promise.resolve([]);
+  return getCatalogo().then(function(cat){
+    var palavras = nq.split(' ').filter(function(w){ return w.length >= 3; });
+    var out = [];
+    for (var i = 0; i < cat.length; i++) {
+      var n = cat[i][1];
+      /* corte rápido: tamanho parecido ou alguma palavra em comum */
+      if (Math.abs(n.length - nq.length) > 8 && !palavras.some(function(w){ return n.indexOf(w) >= 0; })) continue;
+      var s = similaridade(nq, n);
+      if (s < 0.55) {
+        /* leitura parcial: compara com o começo do nome do mesmo tamanho */
+        var s2 = similaridade(nq, n.slice(0, nq.length));
+        if (s2 > s) s = s2 * 0.95;
+      }
+      if (s >= 0.55) out.push([s, cat[i][0]]);
     }
-    desenharSugestoes(nomes, q, daCamera);
+    out.sort(function(a, b){ return b[0] - a[0]; });
+    return out.slice(0, 10).map(function(x){ return x[1]; });
   });
 }
-function desenharSugestoes(nomes, q, daCamera){
-  var h = '';
-  nomes.forEach(function(n, i){ h += '<button class="' + (i === 0 && daCamera ? 'hit' : '') + '" data-nome="' + esc(n) + '">' + esc(n) + '</button>'; });
-  h += '<button data-nome="' + esc(q) + '">Usar "' + esc(q) + '" mesmo assim</button>';
-  $('sugestoes').innerHTML = h;
-  if (daCamera && nomes.length && navigator.vibrate) navigator.vibrate(40);
+function consultarNomes(q){
+  q = (q || '').trim();
+  if (q.length < 3) return Promise.resolve([]);
+  return buscaCrua(q).then(function(nomes){
+    if (nomes.length) return nomes.slice(0, 10);
+    return fuzzyLocal(q).then(function(loc){
+      if (loc.length) return loc;
+      return jogo === 'Magic' ? buscaFuzzyMagic(q) : [];
+    });
+  });
 }
 
 /* ===== item ===== */
