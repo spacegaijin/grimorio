@@ -106,8 +106,56 @@ function testarFotos() {
   Logger.log('OK, foto lida: ' + r.length + ' caracteres');
 }
 
+/* ===== PREÇO NA LIGA (experimental: o servidor do Google lê a página da Liga) ===== */
+function urlLiga_(nome, jogo) {
+  const base = jogo === 'pokemon' ? 'https://www.ligapokemon.com.br' : 'https://www.ligamagic.com.br';
+  return base + '/?view=cards/card&card=' + encodeURIComponent(nome);
+}
+function buscarLiga_(nome, jogo) {
+  const r = UrlFetchApp.fetch(urlLiga_(nome, jogo), {
+    muteHttpExceptions: true, followRedirects: true,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9'
+    }
+  });
+  return {codigo: r.getResponseCode(), html: r.getContentText()};
+}
+function precosDoHtml_(html) {
+  const vals = [];
+  const re = /R\$\s*([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2})/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const v = parseFloat(m[1].replace(/\./g, '').replace(',', '.'));
+    if (v > 0) vals.push(v);
+  }
+  return vals;
+}
+function precoLiga(nome, jogo) {
+  const r = buscarLiga_(nome, jogo);
+  if (r.codigo != 200) return {ok: false, codigo: r.codigo};
+  const vals = precosDoHtml_(r.html);
+  if (!vals.length) return {ok: true, codigo: 200, encontrados: 0};
+  vals.sort((a, b) => a - b);
+  return {ok: true, codigo: 200, encontrados: vals.length, menor: vals[0], mediana: vals[Math.floor(vals.length / 2)], maior: vals[vals.length - 1], url: urlLiga_(nome, jogo)};
+}
+// Rodar no editor e me mandar o registro.
+function testarLiga() {
+  const r = buscarLiga_('Lightning Bolt', 'magic');
+  Logger.log('HTTP ' + r.codigo + ' | tamanho ' + r.html.length);
+  const i = r.html.indexOf('R$');
+  Logger.log('primeiro R$ em ' + i + ' | trecho: ' + (i >= 0 ? r.html.substr(Math.max(0, i - 300), 700).replace(/\s+/g, ' ') : r.html.substr(0, 500).replace(/\s+/g, ' ')));
+  Logger.log('precos achados: ' + JSON.stringify(precosDoHtml_(r.html).slice(0, 20)));
+}
+
 /* ===== APP WEB ===== */
-function doGet() {
+function doGet(e) {
+  // modo API: /exec?liga=NOME&jogo=magic|pokemon → JSON com preços lidos da Liga
+  if (e && e.parameter && e.parameter.liga) {
+    const out = precoLiga(e.parameter.liga, e.parameter.jogo || 'magic');
+    return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  }
   return HtmlService.createHtmlOutputFromFile('Index').setTitle('Grimório')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
